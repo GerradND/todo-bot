@@ -36,6 +36,8 @@ dependencies:
   - data-default
   - data-flags
   - generic-lens
+  - persistent
+  - aeson
 
 ghc-options:
   - -Wall

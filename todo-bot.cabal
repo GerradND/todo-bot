@@ -32,7 +32,8 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , calamity >=0.3.0.0
     , data-default
     , data-flags
@@ -43,6 +44,7 @@ library
     , generic-lens
     , lens >=5.1 && <6
     , optics >=0.4.1 && <0.5
+    , persistent
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3
@@ -64,7 +66,8 @@ executable todo-bot-exe
       TypeApplications
   default-language: Haskell2010
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , calamity >=0.3.0.0
     , data-default
     , data-flags
@@ -75,6 +78,7 @@ executable todo-bot-exe
     , generic-lens
     , lens >=5.1 && <6
     , optics >=0.4.1 && <0.5
+    , persistent
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3
@@ -91,7 +95,8 @@ test-suite todo-bot-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , calamity >=0.3.0.0
     , data-default
     , data-flags
@@ -102,6 +107,7 @@ test-suite todo-bot-test
     , generic-lens
     , lens >=5.1 && <6
     , optics >=0.4.1 && <0.5
+    , persistent
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3

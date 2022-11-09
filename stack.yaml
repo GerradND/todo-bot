@@ -66,6 +66,8 @@ packages:
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
 extra-deps:
+  - persistent-2.14.3.0
+  - aeson-2.0.3.0
   - calamity-0.7.0.1
   - optics-0.4.2
   - lens-5.2
