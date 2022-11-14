@@ -32,7 +32,7 @@ BlogPost
     deriving Show
 |]
 
-connStr = "host=localhost dbname=todobot user=postgres password=postgres port=5432"
+connStr = "host=localhost dbname=<DBNAME> user=<USER> password=<PASSWORD> port=<PORT>"
 
 main :: IO ()
 main = runStderrLoggingT $ withPostgresqlPool connStr 10 $ \pool -> liftIO $ do
