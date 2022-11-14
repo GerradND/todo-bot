@@ -46,10 +46,6 @@ library
     , generic-lens
     , lens >=5.1 && <6
     , monad-logger
-<<<<<<< HEAD
-    , mtl
-=======
->>>>>>> eaa5820c61edf9ac5e4d4d6c3d6cf502b46438c9
     , optics >=0.4.1 && <0.5
     , persistent
     , persistent-postgresql
@@ -86,10 +82,6 @@ executable todo-bot-exe
     , generic-lens
     , lens >=5.1 && <6
     , monad-logger
-<<<<<<< HEAD
-    , mtl
-=======
->>>>>>> eaa5820c61edf9ac5e4d4d6c3d6cf502b46438c9
     , optics >=0.4.1 && <0.5
     , persistent
     , persistent-postgresql
@@ -121,10 +113,6 @@ test-suite todo-bot-test
     , generic-lens
     , lens >=5.1 && <6
     , monad-logger
-<<<<<<< HEAD
-    , mtl
-=======
->>>>>>> eaa5820c61edf9ac5e4d4d6c3d6cf502b46438c9
     , optics >=0.4.1 && <0.5
     , persistent
     , persistent-postgresql
