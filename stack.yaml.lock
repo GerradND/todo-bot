@@ -12,6 +12,27 @@ packages:
   original:
     hackage: persistent-2.14.3.0
 - completed:
+    hackage: persistent-postgresql-2.13.5.0@sha256:4ec08fd2f30b42800b8b622d322f3c5f54d263b5b668adae5aa7a6c8388c041c,3686
+    pantry-tree:
+      sha256: c93bcd46cdefde16d368d9e5f9ad98c7b3adea6b05c3a6c4f9a897553a036f3f
+      size: 1140
+  original:
+    hackage: persistent-postgresql-2.13.5.0
+- completed:
+    hackage: mtl-2.2.2@sha256:1050fb71acd9f5d67da7d992583f5bd0eb14407b9dc7acc122af1b738b706ca3,2261
+    pantry-tree:
+      sha256: b8bdc2259e2f943a7252fb164805666fe108ac959d398e0af27b43ba2ebc241c
+      size: 1713
+  original:
+    hackage: mtl-2.2.2
+- completed:
+    hackage: monad-logger-0.3.37@sha256:0d9a0bd965b516b1855b0e52097581ae5df931c34de5ac626a673f34e7017cce,1759
+    pantry-tree:
+      sha256: b0da345262df58ba40cc66936f24562415d1baba3306c80cb7040c322e1863fe
+      size: 396
+  original:
+    hackage: monad-logger-0.3.37
+- completed:
     hackage: aeson-2.0.3.0@sha256:510c59bece9c6b3d9e999674b869c765cdc3df9f9f90b6871df3e62f87b12fff,5867
     pantry-tree:
       sha256: bc95efc07f7d7837f3ab689d7af1d0dd4649296f2b54d0ab4e4d25d0cfb50d32

@@ -37,6 +37,9 @@ dependencies:
   - data-flags
   - generic-lens
   - persistent
+  - persistent-postgresql
+  - mtl
+  - monad-logger
   - aeson
 
 ghc-options:

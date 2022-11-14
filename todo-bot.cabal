@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Database
       Lib
   other-modules:
       Paths_todo_bot
@@ -43,8 +44,11 @@ library
     , di-polysemy ==0.2.*
     , generic-lens
     , lens >=5.1 && <6
+    , monad-logger
+    , mtl
     , optics >=0.4.1 && <0.5
     , persistent
+    , persistent-postgresql
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3
@@ -77,8 +81,11 @@ executable todo-bot-exe
     , di-polysemy ==0.2.*
     , generic-lens
     , lens >=5.1 && <6
+    , monad-logger
+    , mtl
     , optics >=0.4.1 && <0.5
     , persistent
+    , persistent-postgresql
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3
@@ -106,8 +113,11 @@ test-suite todo-bot-test
     , di-polysemy ==0.2.*
     , generic-lens
     , lens >=5.1 && <6
+    , monad-logger
+    , mtl
     , optics >=0.4.1 && <0.5
     , persistent
+    , persistent-postgresql
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , stm >=2.5 && <3

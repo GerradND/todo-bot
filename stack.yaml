@@ -67,6 +67,9 @@ packages:
 # compiler-check: newer-minor
 extra-deps:
   - persistent-2.14.3.0
+  - persistent-postgresql-2.13.5.0
+  - mtl-2.2.2
+  - monad-logger-0.3.37
   - aeson-2.0.3.0
   - calamity-0.7.0.1
   - optics-0.4.2
