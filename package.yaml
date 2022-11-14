@@ -38,7 +38,6 @@ dependencies:
   - generic-lens
   - persistent
   - persistent-postgresql
-  - mtl
   - monad-logger
   - aeson
 
