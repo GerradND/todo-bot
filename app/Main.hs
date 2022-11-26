@@ -1,6 +1,6 @@
 module Main where
 
-import PostgresDB
+import Discord
 
 main :: IO ()
-main = PostgresDB.main
+main = Discord.main
