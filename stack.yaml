@@ -80,6 +80,7 @@ extra-deps:
   - stm-2.5.1.0
   - text-show-3.10
   - generic-lens-2.2.1.0
+  - conduit-1.3.4.2
   - aeson-optics-1.2.0.1@sha256:b88e84aecef97e212c91c2af3700f617f0af033b5e7ef4bd728ecb37f8079bcb,1543
   - calamity-commands-0.4.0.0@sha256:1eaf79e6b1dab1c20e554b9ce00ebe524c0890e546ffbd0ac40c42c05f5a807f,3006
   - data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097

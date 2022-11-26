@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Database
       Discord
       Lib
       PostgresDB
@@ -37,6 +38,7 @@ library
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
@@ -73,6 +75,7 @@ executable todo-bot-exe
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
@@ -104,6 +107,7 @@ test-suite todo-bot-test
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
