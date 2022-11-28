@@ -42,6 +42,7 @@ import Database.Persist.Postgresql
 import Database.Persist.TH
 import Control.Monad.IO.Class  (liftIO)
 import Control.Monad.Logger    (runStderrLoggingT)
+import Data.Typeable
 import PostgresDB
 import Database
 
@@ -51,7 +52,7 @@ data MyViewState = MyViewState
   }
 
 connStr :: ConnectionString
-connStr = "host=localhost dbname=postgres user=postgres password=root port=5432"
+connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
 
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
@@ -63,93 +64,108 @@ main = Di.new $ \di -> void . P.runFinal . P.embedToFinal @IO . DiP.runDiToIO di
         . useConstantPrefix "!"
         . useFullContext
         . runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do
-          addCommands $ do
+          db $ runMigration migrateAll 
+          void $ addCommands $ do
             helpCommand
-            -- just some examples
-
             command @'[] "utest" \ctx -> do
+              -- data Context = Context { ... , user :: User }
+              -- #user :: Getter s a 
+              -- data User = User { ... , username :: Text }
+              -- Map s a
               void $ tell @T.Text ctx $ "got user: " <> ctx ^. #user % #username <> ", with message: " <> ctx ^. #message % #content
-            command @'[] "test" \ctx -> do
-              void $ tell @T.Text ctx "testing..."
-            command @'[] "bye" \ctx -> do
-              void $ tell @T.Text ctx "bye!"
-              -- runPersistWithConnection Discord.connStr $ insert _
-              stopBot
+              DiP.info $ "Type: " <> show (typeOf $ ctx ^. #user % #username) <> ", value: " <> show (ctx ^. #user % #username)
+              db_ $ insert $ UserD (ctx ^. #user % #username) (ctx ^. #message % #content)
+            command @'[] "user" \ctx -> do
+              let user = ctx ^. #user % #username
+              userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
+              void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
+          -- addCommands $ do
+          --   helpCommand
+          --   -- just some examples
 
-            -- views!
+          --   command @'[] "utest" \ctx -> do
+          --     void $ tell @T.Text ctx $ "got user: " <> ctx ^. #user % #username <> ", with message: " <> ctx ^. #message % #content
+          --   command @'[] "test" \ctx -> do
+          --     void $ tell @T.Text ctx "testing..."
+          --   command @'[] "bye" \ctx -> do
+          --     void $ tell @T.Text ctx "bye!"
+          --     -- runPersistWithConnection Discord.connStr $ insert _
+          --     stopBot
 
-            command @'[] "components" \ctx -> do
-              let view options = do
-                    ~(add, done) <- I.row do
-                      add <- I.button ButtonPrimary "add"
-                      done <- I.button ButtonPrimary "done"
-                      pure (add, done)
-                    s <- I.select options
-                    pure (add, done, s)
-              let initialState = MyViewState 1 Nothing
-              s <- P.evalState initialState $
-                I.runView (view ["0"]) (tell ctx) \(add, done, s) -> do
-                  when add do
-                    n <- P.gets (^. #numOptions)
-                    let n' = n + 1
-                    P.modify' (#numOptions .~ n')
-                    let options = map (T.pack . show) [0 .. n]
-                    I.replaceView (view options) (void . I.edit)
+          --   -- views!
 
-                  when done do
-                    finalSelected <- P.gets (^. #selected)
-                    I.endView finalSelected
-                    I.deleteInitialMsg
-                    void . I.respond $ case finalSelected of
-                      Just x -> "Thanks: " <> x
-                      Nothing -> "Oopsie"
+          --   command @'[] "components" \ctx -> do
+          --     let view options = do
+          --           ~(add, done) <- I.row do
+          --             add <- I.button ButtonPrimary "add"
+          --             done <- I.button ButtonPrimary "done"
+          --             pure (add, done)
+          --           s <- I.select options
+          --           pure (add, done, s)
+          --     let initialState = MyViewState 1 Nothing
+          --     s <- P.evalState initialState $
+          --       I.runView (view ["0"]) (tell ctx) \(add, done, s) -> do
+          --         when add do
+          --           n <- P.gets (^. #numOptions)
+          --           let n' = n + 1
+          --           P.modify' (#numOptions .~ n')
+          --           let options = map (T.pack . show) [0 .. n]
+          --           I.replaceView (view options) (void . I.edit)
 
-                  case s of
-                    Just s' -> do
-                      P.modify' (#selected ?~ s')
-                      void I.deferComponent
-                    Nothing -> pure ()
-              P.embed $ print s
+          --         when done do
+          --           finalSelected <- P.gets (^. #selected)
+          --           I.endView finalSelected
+          --           I.deleteInitialMsg
+          --           void . I.respond $ case finalSelected of
+          --             Just x -> "Thanks: " <> x
+          --             Nothing -> "Oopsie"
 
-            -- more views!
+          --         case s of
+          --           Just s' -> do
+          --             P.modify' (#selected ?~ s')
+          --             void I.deferComponent
+          --           Nothing -> pure ()
+          --     P.embed $ print s
 
-            command @'[] "cresponses" \ctx -> do
-              let view = I.row do
-                    a <- I.button ButtonPrimary "defer"
-                    b <- I.button ButtonPrimary "deferEph"
-                    c <- I.button ButtonPrimary "deferComp"
-                    d <- I.button ButtonPrimary "modal"
-                    pure (a, b, c, d)
+          --   -- more views!
 
-                  modalView = do
-                    a <- I.textInput TextInputShort "a"
-                    b <- I.textInput TextInputParagraph "b"
-                    pure (a, b)
+          --   command @'[] "cresponses" \ctx -> do
+          --     let view = I.row do
+          --           a <- I.button ButtonPrimary "defer"
+          --           b <- I.button ButtonPrimary "deferEph"
+          --           c <- I.button ButtonPrimary "deferComp"
+          --           d <- I.button ButtonPrimary "modal"
+          --           pure (a, b, c, d)
 
-              I.runView view (tell ctx) $ \(a, b, c, d) -> do
-                when a do
-                  void I.defer
-                  P.embed $ threadDelay 1000000
-                  void $ I.followUp @T.Text "lol"
+          --         modalView = do
+          --           a <- I.textInput TextInputShort "a"
+          --           b <- I.textInput TextInputParagraph "b"
+          --           pure (a, b)
 
-                when b do
-                  void I.deferEphemeral
-                  P.embed $ threadDelay 1000000
-                  void $ I.followUpEphemeral @T.Text "lol"
+          --     I.runView view (tell ctx) $ \(a, b, c, d) -> do
+          --       when a do
+          --         void I.defer
+          --         P.embed $ threadDelay 1000000
+          --         void $ I.followUp @T.Text "lol"
 
-                when c do
-                  void I.deferComponent
-                  P.embed $ threadDelay 1000000
-                  void $ I.followUp @T.Text "lol"
+          --       when b do
+          --         void I.deferEphemeral
+          --         P.embed $ threadDelay 1000000
+          --         void $ I.followUpEphemeral @T.Text "lol"
 
-                when d do
-                  void . P.async $ do
-                    I.runView modalView (void . I.pushModal "lol") $ \(a, b) -> do
-                      P.embed $ print (a, b)
-                      void $ I.respond ("Thanks: " <> a <> " " <> b)
-                      I.endView ()
+          --       when c do
+          --         void I.deferComponent
+          --         P.embed $ threadDelay 1000000
+          --         void $ I.followUp @T.Text "lol"
 
-                pure ()
+          --       when d do
+          --         void . P.async $ do
+          --           I.runView modalView (void . I.pushModal "lol") $ \(a, b) -> do
+          --             P.embed $ print (a, b)
+          --             void $ I.respond ("Thanks: " <> a <> " " <> b)
+          --             I.endView ()
 
-          react @( 'CustomEvt (CommandInvoked FullContext)) $ \(CommandInvoked ctx) -> do
-            DiP.info $ "Command invoked by " <> ctx ^. #user % #username <> ":\n" <> ctx ^. #message % #content
+          --       pure ()
+
+          -- react @( 'CustomEvt (CommandInvoked FullContext)) $ \(CommandInvoked ctx) -> do
+          --   DiP.info $ "Command invoked by " <> ctx ^. #user % #username <> ":\n" <> ctx ^. #message % #content
