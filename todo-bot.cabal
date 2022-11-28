@@ -25,9 +25,12 @@ source-repository head
 
 library
   exposed-modules:
+      Database
       Discord
       Lib
       PostgresDB
+      Service.List
+      Service.Test
   other-modules:
       Paths_todo_bot
   hs-source-dirs:
@@ -37,6 +40,8 @@ library
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
+    , containers
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
@@ -54,13 +59,13 @@ library
     , stm >=2.5 && <3
     , text
     , text-show >=3.8 && <4
+    , time
   default-language: Haskell2010
 
 executable todo-bot-exe
   main-is: Main.hs
   other-modules:
       Paths_todo_bot
-  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin -threaded -rtsopts -with-rtsopts=-N
   hs-source-dirs:
       app
   default-extensions:
@@ -68,11 +73,13 @@ executable todo-bot-exe
       OverloadedLabels
       OverloadedStrings
       TypeApplications
-  default-language: Haskell2010
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
+    , containers
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
@@ -90,7 +97,9 @@ executable todo-bot-exe
     , stm >=2.5 && <3
     , text
     , text-show >=3.8 && <4
+    , time
     , todo-bot
+  default-language: Haskell2010
 
 test-suite todo-bot-test
   type: exitcode-stdio-1.0
@@ -104,6 +113,8 @@ test-suite todo-bot-test
       aeson
     , base >=4.7 && <5
     , calamity >=0.3.0.0
+    , conduit
+    , containers
     , data-default
     , data-flags
     , df1 >=0.3 && <0.5
@@ -121,5 +132,6 @@ test-suite todo-bot-test
     , stm >=2.5 && <3
     , text
     , text-show >=3.8 && <4
+    , time
     , todo-bot
   default-language: Haskell2010

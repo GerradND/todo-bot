@@ -34,6 +34,27 @@ import qualified Polysemy.Async as P
 import qualified Polysemy.State as P
 import System.Environment (getEnv)
 import TextShow
+import Service.Test (testService)
+import Service.List (listService)
+import PostgresDB
+import Database
+import           Control.Monad.IO.Class  (liftIO)
+import           Control.Monad.Logger    (runStderrLoggingT)
+import           Database.Persist
+import           Database.Persist.Types
+import           Database.Persist.Postgresql
+import           Database.Persist.TH
+import           Data.Time.Clock(UTCTime)
+import Data.List    
+import Debug.Trace
+import Control.Arrow ((&&&))
+import qualified Data.Map.Strict as Map
+import Data.Time.Format (formatTime, defaultTimeLocale)
+import GHC.Int (Int64)
+import qualified Data.Text as T
+import Calamity.Commands.Context (ctxChannelID)
+
+
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -42,95 +63,50 @@ data MyViewState = MyViewState
 
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
+connStr :: ConnectionString
+connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
+
+addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
+addTodoID [] [] = []
+addTodoID (a:ax) (b:bx) = [(a,b)] ++ addTodoID ax bx
+  
+formatTodo :: [(Int64, (String, (String, (UTCTime, Int))))] -> [String]
+formatTodo [] = []
+formatTodo ((a, (b, (c, (d, e)))):ax)
+    | e == 0 = [ (show a) ++ " - [] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
+    | otherwise = [ (show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
+
+iso8601 :: UTCTime -> String
+iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
+
+returnFunc :: [(Int64, (String, (String, (UTCTime, Int))))] -> String
+returnFunc a
+  | (intercalate "\n" $ formatTodo a) /= "" = (intercalate "\n" $ formatTodo a)
+  | otherwise = "no todo data"
+
 main :: IO ()
 main = do
   Di.new $ \di ->
     void . P.runFinal . P.embedToFinal . DiP.runDiToIO di
       . runCacheInMemory
       . runMetricsNoop
+      . runPersistWith connStr
       . useConstantPrefix "!"
       . useFullContext
-      $ runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do
-        addCommands $ do
+      . runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do 
+        db $ runMigration migrateAll
+        void $ addCommands $ do
           -- just some examples
 
-          command @'[] "test" \ctx -> do
-            void $ tell @T.Text ctx "testing..."
+          command @'[] "all" \ctx -> do
+            allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
+            let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
+            let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
+            let allTodoWithID = addTodoID allTodoID allTodo
+            
+
+            
+            void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
             stopBot
-
-          -- views!
-
-          command @'[] "components" \ctx -> do
-            let view options = do
-                  ~(add, done) <- I.row do
-                    add <- I.button ButtonPrimary "add"
-                    done <- I.button ButtonPrimary "done"
-                    pure (add, done)
-                  s <- I.select options
-                  pure (add, done, s)
-            let initialState = MyViewState 1 Nothing
-            s <- P.evalState initialState $
-              I.runView (view ["0"]) (tell ctx) \(add, done, s) -> do
-                when add do
-                  n <- P.gets (^. #numOptions)
-                  let n' = n + 1
-                  P.modify' (#numOptions .~ n')
-                  let options = map (T.pack . show) [0 .. n]
-                  I.replaceView (view options) (void . I.edit)
-
-                when done do
-                  finalSelected <- P.gets (^. #selected)
-                  I.endView finalSelected
-                  I.deleteInitialMsg
-                  void . I.respond $ case finalSelected of
-                    Just x -> "Thanks: " <> x
-                    Nothing -> "Oopsie"
-
-                case s of
-                  Just s' -> do
-                    P.modify' (#selected ?~ s')
-                    void I.deferComponent
-                  Nothing -> pure ()
-            P.embed $ print s
-
-          -- more views!
-
-          command @'[] "cresponses" \ctx -> do
-            let view = I.row do
-                  a <- I.button ButtonPrimary "defer"
-                  b <- I.button ButtonPrimary "deferEph"
-                  c <- I.button ButtonPrimary "deferComp"
-                  d <- I.button ButtonPrimary "modal"
-                  pure (a, b, c, d)
-
-                modalView = do
-                  a <- I.textInput TextInputShort "a"
-                  b <- I.textInput TextInputParagraph "b"
-                  pure (a, b)
-
-            I.runView view (tell ctx) $ \(a, b, c, d) -> do
-              when a do
-                void I.defer
-                P.embed $ threadDelay 1000000
-                void $ I.followUp @T.Text "lol"
-
-              when b do
-                void I.deferEphemeral
-                P.embed $ threadDelay 1000000
-                void $ I.followUpEphemeral @T.Text "lol"
-
-              when c do
-                void I.deferComponent
-                P.embed $ threadDelay 1000000
-                void $ I.followUp @T.Text "lol"
-
-              when d do
-                void . P.async $ do
-                  I.runView modalView (void . I.pushModal "lol") $ \(a, b) -> do
-                    P.embed $ print (a, b)
-                    void $ I.respond ("Thanks: " <> a <> " " <> b)
-                    I.endView ()
-
-              pure ()
