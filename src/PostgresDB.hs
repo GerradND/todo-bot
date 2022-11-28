@@ -17,39 +17,42 @@ module PostgresDB where
 
 import           Control.Monad.IO.Class  (liftIO)
 import           Control.Monad.Logger    (runStderrLoggingT)
+import           Data.Text               (Text)
 import           Database.Persist
 import           Database.Persist.Postgresql
 import           Database.Persist.TH
 
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
-Person
-    name String
-    age Int Maybe
-    deriving Show
-BlogPost
-    title String
-    authorId PersonId
+UserD
+    name Text
+    message Text
     deriving Show
 |]
 
-connStr = "host=localhost dbname=<DBNAME> user=<USER> password=<PASSWORD> port=<PORT>"
+-- generated datatype
+-- data UserD = UserD
+--   { userDName :: Text
+--   , userDMessage :: Text
+--   }
 
-main :: IO ()
-main = runStderrLoggingT $ withPostgresqlPool connStr 10 $ \pool -> liftIO $ do
-    flip runSqlPersistMPool pool $ do
-        runMigration migrateAll
+-- connStr = "host=localhost dbname=<DBNAME> user=<USER> password=<PASSWORD> port=<PORT>"
 
-        johnId <- insert $ Person "John Doe" $ Just 35
-        janeId <- insert $ Person "Jane Doe" Nothing
+-- main :: IO ()
+-- main = runStderrLoggingT $ withPostgresqlPool connStr 10 $ \pool -> liftIO $ do
+--     flip runSqlPersistMPool pool $ do
+--         runMigration migrateAll
 
-        insert $ BlogPost "My fr1st p0st" johnId
-        insert $ BlogPost "One more for good measure" johnId
+--         johnId <- insert $ Person "John Doe" $ Just 35
+--         janeId <- insert $ Person "Jane Doe" Nothing
 
-        oneJohnPost <- selectList [BlogPostAuthorId ==. johnId] [LimitTo 1]
-        liftIO $ print (oneJohnPost :: [Entity BlogPost])
+--         insert $ BlogPost "My fr1st p0st" johnId
+--         insert $ BlogPost "One more for good measure" johnId
 
-        john <- get johnId
-        liftIO $ print (john :: Maybe Person)
+--         oneJohnPost <- selectList [BlogPostAuthorId ==. johnId] [LimitTo 1]
+--         liftIO $ print (oneJohnPost :: [Entity BlogPost])
 
-        delete janeId
-        deleteWhere [BlogPostAuthorId ==. johnId]
+--         john <- get johnId
+--         liftIO $ print (john :: Maybe Person)
+
+--         delete janeId
+--         deleteWhere [BlogPostAuthorId ==. johnId]
