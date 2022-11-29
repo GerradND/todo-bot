@@ -47,7 +47,7 @@ import Control.Monad.Logger    (runStderrLoggingT)
 import Data.Typeable
 import PostgresDB
 import Database
-import Data.List    
+import Data.List
 import Debug.Trace
 import Control.Arrow ((&&&))
 import qualified Data.Map.Strict as Map
@@ -69,7 +69,7 @@ connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
 addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
 addTodoID [] [] = []
 addTodoID (a:ax) (b:bx) = [(a,b)] ++ addTodoID ax bx
-  
+
 formatTodo :: [(Int64, (String, (String, (UTCTime, Int))))] -> [String]
 formatTodo [] = []
 formatTodo ((a, (b, (c, (d, e)))):ax)
@@ -93,7 +93,7 @@ main = do
       . runPersistWith connStr
       . useConstantPrefix "!"
       . useFullContext
-      . runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do 
+      . runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do
         db $ runMigration migrateAll
         void $ addCommands $ do
           helpCommand
@@ -105,7 +105,7 @@ main = do
             void $ tell @T.Text ctx $ "got user: " <> ctx ^. #user % #username <> ", with message: " <> ctx ^. #message % #content
             DiP.info $ "Type: " <> show (typeOf $ ctx ^. #user % #username) <> ", value: " <> show (ctx ^. #user % #username)
             db_ $ Psql.insert $ UserD (ctx ^. #user % #username) (ctx ^. #message % #content)
-          
+
           command @'[] "user" \ctx -> do
             let user = ctx ^. #user % #username
             userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
@@ -116,21 +116,20 @@ main = do
             let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
             let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
             let allTodoWithID = addTodoID allTodoID allTodo
-            void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
+            void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
 
-          command @'[] "edit" \ctx -> do
-            let content = ctx ^. #message % #content
-            let updateList = tail $ T.splitOn " " content
-            let updateTitle = head updateList
-            let newDescription = last updateList
+          command @'[] "editdesc" \ctx -> do
+            let updateList = tail $ words $ T.unpack $ ctx ^. #message % #content
+            let todotitle = head updateList
+            let newDescription = unwords $ tail updateList
 
-            todoRaw <- db $ getBy $ UniqueTitle $ show updateTitle
+            todoRaw <- db $ getBy $ UniqueTitle todotitle
             case todoRaw of
               Nothing -> pure Nothing
               Just (Entity todoid (Todo {}))  -> do
-                db_ $ update todoid [TodoDescription =. show newDescription]
+                db_ $ update todoid [TodoDescription =. newDescription]
                 pure $ Just todoid
-            void $ tell @T.Text ctx "todo updated"
+            void $ tell @T.Text ctx "description updated"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
