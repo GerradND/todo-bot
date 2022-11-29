@@ -40,6 +40,8 @@ dependencies:
   - persistent-postgresql
   - monad-logger
   - aeson
+  - time
+  - containers
   - conduit
 
 ghc-options:
