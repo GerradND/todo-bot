@@ -41,6 +41,8 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
         status Int
         server_id String
         created_by String
+        UniqueTitle title
+        
         deriving Show
 
     UserD

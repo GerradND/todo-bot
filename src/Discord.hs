@@ -1,10 +1,10 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedLabels #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -64,7 +64,7 @@ data MyViewState = MyViewState
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
-connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
+connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
 
 addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
 addTodoID [] [] = []
@@ -117,6 +117,20 @@ main = do
             let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
             let allTodoWithID = addTodoID allTodoID allTodo
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
+
+          command @'[] "edit" \ctx -> do
+            let content = ctx ^. #message % #content
+            let updateList = tail $ T.splitOn " " content
+            let updateTitle = head updateList
+            let newDescription = last updateList
+
+            todoRaw <- db $ getBy $ UniqueTitle $ show updateTitle
+            case todoRaw of
+              Nothing -> pure Nothing
+              Just (Entity todoid (Todo {}))  -> do
+                db_ $ update todoid [TodoDescription =. show newDescription]
+                pure $ Just todoid
+            void $ tell @T.Text ctx "todo updated"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
