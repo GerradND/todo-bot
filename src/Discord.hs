@@ -96,17 +96,13 @@ main = do
       . runBotIO (BotToken "MTAzNzAxNzYwOTAzNzY3NjU4NQ.GPB_mz.lPXBh0evvPexT8HuCgFmidf85iThgaMpXLeXkI") defaultIntents $ do 
         db $ runMigration migrateAll
         void $ addCommands $ do
-          -- just some examples
-
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
             let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
             let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
             let allTodoWithID = addTodoID allTodoID allTodo
-            
-
-            
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
+
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
             stopBot
