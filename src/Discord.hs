@@ -64,7 +64,7 @@ data MyViewState = MyViewState
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
-connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
+connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
 
 addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
 addTodoID [] [] = []
@@ -110,6 +110,19 @@ main = do
             let user = ctx ^. #user % #username
             userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
             void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
+
+          command @'[T.Text] "test" \ctx txt -> do
+            void $ tell @T.Text ctx $ "user: " <> txt
+          
+          void $ help (const "Mark completed todo list.\nExample: !check 1")
+            $ command @'[T.Text] "check" \ctx txt -> do
+            db_ $ update (toSqlKey . read . T.unpack $ txt) [TodoStatus =. 1]
+            void $ tell @T.Text ctx $ "todo checked!"
+
+          void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
+            $ command @'[T.Text] "uncheck" \ctx txt-> do
+              db_ $ update (toSqlKey . read . T.unpack $ txt) [TodoStatus =. 0]
+              void $ tell @T.Text ctx $ "todo unchecked!"
 
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
