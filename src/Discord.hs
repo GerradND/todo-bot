@@ -17,10 +17,13 @@
 
 module Discord where
 
+import Calamity.Commands.Context as Ctx(FullContext(user), useFullContext, ctxChannelID, ctxMessage)
+
+import Data.Maybe
+import System.IO.Unsafe
 import Calamity
 import Calamity.Cache.InMemory
 import Calamity.Commands
-import Calamity.Commands.Context (useFullContext, FullContext)
 import qualified Calamity.Interactions as I
 import Calamity.Metrics.Noop
 import Control.Concurrent
@@ -41,20 +44,23 @@ import Database.Persist
 import Database.Persist.Postgresql as Psql
 import Database.Persist.TH
 import Database.Persist.Types
-import Data.Time.Clock(UTCTime)
+import Data.Time.Clock(UTCTime, getCurrentTime)
+import Data.Time(defaultTimeLocale, parseTimeM)
 import Control.Monad.IO.Class  (liftIO)
 import Control.Monad.Logger    (runStderrLoggingT)
 import Data.Typeable
 import PostgresDB
 import Database
-import Data.List
+import Data.List    
 import Debug.Trace
 import Control.Arrow ((&&&))
 import qualified Data.Map.Strict as Map
 import Data.Time.Format (formatTime, defaultTimeLocale)
 import GHC.Int (Int64)
 import qualified Data.Text as T
-import Calamity.Commands.Context (ctxChannelID)
+import Calamity.Types.Model.Channel.Message as M
+import Calamity.Types.Model.User as U
+
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -86,6 +92,9 @@ returnFunc a
 
 getMessageContentParams :: T.Text -> [T.Text]
 getMessageContentParams t = tail $ map T.strip (T.splitOn " " t)
+
+deadlinesToUTCTimeString :: T.Text -> T.Text -> String
+deadlinesToUTCTimeString deadlineDate deadlineTime = T.unpack (deadlineDate <> " " <> deadlineTime)
 
 main :: IO ()
 main = do
@@ -147,6 +156,23 @@ main = do
                 db_ $ update todoId [TodoDescription =. T.unpack newDescription]
                 void $ tell @T.Text ctx "Description updated!"
           
+          command @'[] "editdate" \ctx -> do
+            let updateList = getMessageContentParams $ ctx ^. #message % #content
+            let updateId = head updateList
+            let newDate = (head . tail) updateList
+            let newTime = (head . tail . tail) updateList
+            let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+            let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
+            let todoId = toSqlKey . read . T.unpack $ updateId
+            todo <- db $ get todoId
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoDeadline_date =. deadlineDate]
+                void $ tell @T.Text ctx "Deadline date updated!"
+
+
           -- command @'[] "edit" \ctx -> do
           --   let updateList = getMessageContentParams $ ctx ^. #message % #content
           --   let todoid = head updateList
