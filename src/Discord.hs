@@ -123,26 +123,37 @@ main = do
 
           command @'[] "edittitle" \ctx -> do
             let updateList = getMessageContentParams $ ctx ^. #message % #content
-            let todoid = head updateList
+            let updateId = head updateList
             let newTitle = T.intercalate " " $ tail updateList
-
-            db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoTitle =. T.unpack newTitle]
-            void $ tell @T.Text ctx "title updated"
+            let todoId = toSqlKey . read . T.unpack $ updateId
+            todo <- db $ get todoId
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoTitle =. T.unpack newTitle]
+                void $ tell @T.Text ctx "Title updated!"
 
           command @'[] "editdesc" \ctx -> do
             let updateList = getMessageContentParams $ ctx ^. #message % #content
-            let todoid = head updateList
+            let updateId = head updateList
             let newDescription = T.intercalate " " $ tail updateList
+            let todoId = toSqlKey . read . T.unpack $ updateId
+            todo <- db $ get todoId
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoDescription =. T.unpack newDescription]
+                void $ tell @T.Text ctx "Description updated!"
+          
+          -- command @'[] "edit" \ctx -> do
+          --   let updateList = getMessageContentParams $ ctx ^. #message % #content
+          --   let todoid = head updateList
+          --   let newTitle = T.intercalate "\"" $ tail updateList
 
-            -- todoRaw <- db $ getBy $ UniqueTitle todotitle
-            -- case todoRaw of
-            --   Nothing -> pure Nothing
-            --   Just (Entity todoid (Todo {}))  -> do
-            --     db_ $ update todoid [TodoDescription =. newDescription]
-            --     pure $ Just todoid
-
-            db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoDescription =. T.unpack newDescription]
-            void $ tell @T.Text ctx "description updated"
+          --   db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoTitle =. T.unpack newTitle]
+          --   void $ tell @T.Text ctx "title updated"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
