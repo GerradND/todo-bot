@@ -93,6 +93,9 @@ returnFunc a
 getMessageContentParams :: T.Text -> [T.Text]
 getMessageContentParams t = tail $ map T.strip (T.splitOn " " t)
 
+getFullTodoContentParams :: T.Text -> [T.Text]
+getFullTodoContentParams t = tail $ map T.strip (T.splitOn "|" t)
+
 deadlinesToUTCTimeString :: T.Text -> T.Text -> String
 deadlinesToUTCTimeString deadlineDate deadlineTime = T.unpack (deadlineDate <> " " <> deadlineTime)
 
@@ -134,6 +137,7 @@ main = do
             let updateList = getMessageContentParams $ ctx ^. #message % #content
             let updateId = head updateList
             let newTitle = T.intercalate " " $ tail updateList
+
             let todoId = toSqlKey . read . T.unpack $ updateId
             todo <- db $ get todoId
             case todo of
@@ -147,6 +151,7 @@ main = do
             let updateList = getMessageContentParams $ ctx ^. #message % #content
             let updateId = head updateList
             let newDescription = T.intercalate " " $ tail updateList
+
             let todoId = toSqlKey . read . T.unpack $ updateId
             todo <- db $ get todoId
             case todo of
@@ -161,8 +166,10 @@ main = do
             let updateId = head updateList
             let newDate = (head . tail) updateList
             let newTime = (head . tail . tail) updateList
+
             let deadlineDateString = deadlinesToUTCTimeString newDate newTime
             let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
+
             let todoId = toSqlKey . read . T.unpack $ updateId
             todo <- db $ get todoId
             case todo of
@@ -172,14 +179,29 @@ main = do
                 db_ $ update todoId [TodoDeadline_date =. deadlineDate]
                 void $ tell @T.Text ctx "Deadline date updated!"
 
+          command @'[] "edit" \ctx -> do
+            let updateList = getMessageContentParams $ ctx ^. #message % #content
+            let updateId = head updateList
 
-          -- command @'[] "edit" \ctx -> do
-          --   let updateList = getMessageContentParams $ ctx ^. #message % #content
-          --   let todoid = head updateList
-          --   let newTitle = T.intercalate "\"" $ tail updateList
+            let paramList = getFullTodoContentParams $ ctx ^. #message % #content
+            let newTitle = head paramList
+            let newDescription = (head . tail) paramList
+            let newDateTime = T.splitOn " " $ (head . tail . tail) paramList
+            let newDate = head newDateTime
+            let newTime = (head . tail) newDateTime
 
-          --   db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoTitle =. T.unpack newTitle]
-          --   void $ tell @T.Text ctx "title updated"
+            let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+            let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
+
+            let todoId = toSqlKey . read . T.unpack $ updateId
+            todo <- db $ get todoId
+            void $ tell @T.Text ctx newTime
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. deadlineDate]
+                void $ tell @T.Text ctx "Todo updated!"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
