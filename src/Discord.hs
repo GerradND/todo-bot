@@ -47,7 +47,8 @@ import Control.Monad.Logger    (runStderrLoggingT)
 import Data.Typeable
 import PostgresDB
 import Database
-import Data.List    
+import Data.List  
+import Data.Char (isDigit)  
 import Debug.Trace
 import Control.Arrow ((&&&))
 import qualified Data.Map.Strict as Map
@@ -113,25 +114,35 @@ main = do
           
           void $ help (const "Mark completed todo list.\nExample: !check 1")
             $ command @'[T.Text] "check" \ctx txt -> do
-            let todoId = toSqlKey . read . T.unpack $ txt
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx $ "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoStatus =. 1]
-                void $ tell @T.Text ctx $ "Todo checked!"
+            let message = T.unpack $ ctx ^. #message % #content
+            let lengthMessage = length . words $ message
+            if lengthMessage == 2 && (all isDigit $ T.unpack txt)
+              then do
+                let todoId = toSqlKey . read . T.unpack $ txt
+                todo <- db $ get todoId
+                case todo of
+                  Nothing -> do
+                    void $ tell @T.Text ctx $ "Todo not found!"
+                  Just (Todo {}) -> do
+                    db_ $ update todoId [TodoStatus =. 1]
+                    void $ tell @T.Text ctx $ "Todo checked!"
+            else void $ tell @T.Text ctx $ "Wrong format!"
 
           void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
             $ command @'[T.Text] "uncheck" \ctx txt-> do
-            let todoId = toSqlKey . read . T.unpack $ txt
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx $ "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoStatus =. 0]
-                void $ tell @T.Text ctx $ "Todo unchecked!"
+            let message = T.unpack $ ctx ^. #message % #content
+            let lengthMessage = length . words $ message
+            if lengthMessage == 2 && (all isDigit $ T.unpack txt)
+              then do
+                let todoId = toSqlKey . read . T.unpack $ txt
+                todo <- db $ get todoId
+                case todo of
+                  Nothing -> do
+                    void $ tell @T.Text ctx $ "Todo not found!"
+                  Just (Todo {}) -> do
+                    db_ $ update todoId [TodoStatus =. 0]
+                    void $ tell @T.Text ctx $ "Todo unchecked!"
+            else void $ tell @T.Text ctx $ "Wrong format!"
 
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
