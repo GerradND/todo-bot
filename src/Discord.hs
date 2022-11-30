@@ -121,6 +121,14 @@ main = do
             let allTodoWithID = addTodoID allTodoID allTodo
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
 
+          command @'[] "edittitle" \ctx -> do
+            let updateList = getMessageContentParams $ ctx ^. #message % #content
+            let todoid = head updateList
+            let newTitle = T.intercalate " " $ tail updateList
+
+            db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoTitle =. T.unpack newTitle]
+            void $ tell @T.Text ctx "title updated"
+
           command @'[] "editdesc" \ctx -> do
             let updateList = getMessageContentParams $ ctx ^. #message % #content
             let todoid = head updateList
