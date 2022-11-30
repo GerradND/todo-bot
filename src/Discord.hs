@@ -84,6 +84,9 @@ returnFunc a
   | (intercalate "\n" $ formatTodo a) /= "" = (intercalate "\n" $ formatTodo a)
   | otherwise = "no todo data"
 
+getMessageContentParams :: T.Text -> [T.Text]
+getMessageContentParams t = tail $ map T.strip (T.splitOn " " t)
+
 main :: IO ()
 main = do
   Di.new $ \di ->
@@ -119,16 +122,18 @@ main = do
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
 
           command @'[] "editdesc" \ctx -> do
-            let updateList = tail $ words $ T.unpack $ ctx ^. #message % #content
-            let todotitle = head updateList
-            let newDescription = unwords $ tail updateList
+            let updateList = getMessageContentParams $ ctx ^. #message % #content
+            let todoid = head updateList
+            let newDescription = T.intercalate " " $ tail updateList
 
-            todoRaw <- db $ getBy $ UniqueTitle todotitle
-            case todoRaw of
-              Nothing -> pure Nothing
-              Just (Entity todoid (Todo {}))  -> do
-                db_ $ update todoid [TodoDescription =. newDescription]
-                pure $ Just todoid
+            -- todoRaw <- db $ getBy $ UniqueTitle todotitle
+            -- case todoRaw of
+            --   Nothing -> pure Nothing
+            --   Just (Entity todoid (Todo {}))  -> do
+            --     db_ $ update todoid [TodoDescription =. newDescription]
+            --     pure $ Just todoid
+
+            db_ $ update (toSqlKey . read . T.unpack $ todoid) [TodoDescription =. T.unpack newDescription]
             void $ tell @T.Text ctx "description updated"
 
           command @'[] "bye" \ctx -> do
