@@ -110,19 +110,28 @@ main = do
             let user = ctx ^. #user % #username
             userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
             void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
-
-          command @'[T.Text] "test" \ctx txt -> do
-            void $ tell @T.Text ctx $ "user: " <> txt
           
           void $ help (const "Mark completed todo list.\nExample: !check 1")
             $ command @'[T.Text] "check" \ctx txt -> do
-            db_ $ update (toSqlKey . read . T.unpack $ txt) [TodoStatus =. 1]
-            void $ tell @T.Text ctx $ "todo checked!"
+            let todoId = toSqlKey . read . T.unpack $ txt
+            todo <- db $ get todoId
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx $ "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoStatus =. 1]
+                void $ tell @T.Text ctx $ "Todo checked!"
 
           void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
             $ command @'[T.Text] "uncheck" \ctx txt-> do
-              db_ $ update (toSqlKey . read . T.unpack $ txt) [TodoStatus =. 0]
-              void $ tell @T.Text ctx $ "todo unchecked!"
+            let todoId = toSqlKey . read . T.unpack $ txt
+            todo <- db $ get todoId
+            case todo of
+              Nothing -> do
+                void $ tell @T.Text ctx $ "Todo not found!"
+              Just (Todo {}) -> do
+                db_ $ update todoId [TodoStatus =. 0]
+                void $ tell @T.Text ctx $ "Todo unchecked!"
 
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
