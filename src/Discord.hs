@@ -1,5 +1,4 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
-
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -17,45 +16,41 @@
 
 module Discord where
 
-import Calamity
-import Calamity.Cache.InMemory
-import Calamity.Commands
-import Calamity.Commands.Context (useFullContext, FullContext)
-import qualified Calamity.Interactions as I
-import Calamity.Metrics.Noop
-import Control.Concurrent
-import Optics
-import Control.Monad
-import qualified Data.Text as T
+import           Calamity
+import           Calamity.Cache.InMemory
+import           Control.Concurrent
+import           Calamity.Commands
+import           Calamity.Commands.Context (useFullContext, ctxChannelID)
+import qualified Calamity.Interactions        as I
+import           Calamity.Metrics.Noop
+import           Control.Arrow ((&&&))
+import           Control.Monad
+import           Control.Monad.Logger    (runStderrLoggingT)
+import           Data.Char (isDigit)  
+import           Data.List  
+import qualified Data.Map.Strict              as Map
+import qualified Data.Text                    as T
+import           Data.Time.Clock(UTCTime)
+import           Data.Time.Format (formatTime, defaultTimeLocale)
+import           Database
+import           Database.Persist
+import           Database.Persist.Postgresql  as Psql
+import           Database.Persist.TH
+import           Database.Persist.Types
+import           Debug.Trace
 import qualified Di
-import qualified DiPolysemy as DiP
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.State as P
-import qualified Polysemy.AtomicState      as P
-import qualified Polysemy.Fail             as P
-import qualified Polysemy.Reader           as P
-import System.Environment (getEnv)
-import TextShow
-import Database.Persist
-import Database.Persist.Postgresql as Psql
-import Database.Persist.TH
-import Database.Persist.Types
-import Data.Time.Clock(UTCTime)
-import Control.Monad.IO.Class  (liftIO)
-import Control.Monad.Logger    (runStderrLoggingT)
-import Data.Typeable
-import PostgresDB
-import Database
-import Data.List  
-import Data.Char (isDigit)  
-import Debug.Trace
-import Control.Arrow ((&&&))
-import qualified Data.Map.Strict as Map
-import Data.Time.Format (formatTime, defaultTimeLocale)
-import GHC.Int (Int64)
-import qualified Data.Text as T
-import Calamity.Commands.Context (ctxChannelID)
+import qualified DiPolysemy                   as DiP
+import           GHC.Int (Int64)
+import           Optics
+import qualified Polysemy                     as P
+import qualified Polysemy.Async               as P
+import qualified Polysemy.State               as P
+import qualified Polysemy.AtomicState         as P
+import qualified Polysemy.Fail                as P
+import qualified Polysemy.Reader              as P
+import           PostgresDB
+import           Query
+import           TextShow
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -74,8 +69,8 @@ addTodoID (a:ax) (b:bx) = [(a,b)] ++ addTodoID ax bx
 formatTodo :: [(Int64, (String, (String, (UTCTime, Int))))] -> [String]
 formatTodo [] = []
 formatTodo ((a, (b, (c, (d, e)))):ax)
-    | e == 0 = [ (show a) ++ " - [] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
-    | otherwise = [ (show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
+  | e == 0 = [ (show a) ++ " - [] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
+  | otherwise = [ (show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
 
 iso8601 :: UTCTime -> String
 iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
@@ -104,7 +99,6 @@ main = do
             -- data User = User { ... , username :: Text }
             -- Map s a
             void $ tell @T.Text ctx $ "got user: " <> ctx ^. #user % #username <> ", with message: " <> ctx ^. #message % #content
-            DiP.info $ "Type: " <> show (typeOf $ ctx ^. #user % #username) <> ", value: " <> show (ctx ^. #user % #username)
             db_ $ Psql.insert $ UserD (ctx ^. #user % #username) (ctx ^. #message % #content)
           
           command @'[] "user" \ctx -> do
@@ -114,35 +108,11 @@ main = do
           
           void $ help (const "Mark completed todo list.\nExample: !check 1")
             $ command @'[T.Text] "check" \ctx txt -> do
-            let message = T.unpack $ ctx ^. #message % #content
-            let lengthMessage = length . words $ message
-            if lengthMessage == 2 && (all isDigit $ T.unpack txt)
-              then do
-                let todoId = toSqlKey . read . T.unpack $ txt
-                todo <- db $ get todoId
-                case todo of
-                  Nothing -> do
-                    void $ tell @T.Text ctx $ "Todo not found!"
-                  Just (Todo {}) -> do
-                    db_ $ update todoId [TodoStatus =. 1]
-                    void $ tell @T.Text ctx $ "Todo checked!"
-            else void $ tell @T.Text ctx $ "Wrong format!"
+            checkUncheckQuery ctx txt 1
 
           void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
             $ command @'[T.Text] "uncheck" \ctx txt-> do
-            let message = T.unpack $ ctx ^. #message % #content
-            let lengthMessage = length . words $ message
-            if lengthMessage == 2 && (all isDigit $ T.unpack txt)
-              then do
-                let todoId = toSqlKey . read . T.unpack $ txt
-                todo <- db $ get todoId
-                case todo of
-                  Nothing -> do
-                    void $ tell @T.Text ctx $ "Todo not found!"
-                  Just (Todo {}) -> do
-                    db_ $ update todoId [TodoStatus =. 0]
-                    void $ tell @T.Text ctx $ "Todo unchecked!"
-            else void $ tell @T.Text ctx $ "Wrong format!"
+            checkUncheckQuery ctx txt 0
 
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
