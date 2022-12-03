@@ -107,12 +107,12 @@ main = do
             void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
           
           void $ help (const "Mark completed todo list.\nExample: !check 1")
-            $ command @'[T.Text] "check" \ctx txt -> do
-            checkUncheckQuery ctx txt 1
+            $ command @'[T.Text] "check" \ctx todoId -> do
+            checkUncheckQuery ctx todoId 1
 
           void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
-            $ command @'[T.Text] "uncheck" \ctx txt-> do
-            checkUncheckQuery ctx txt 0
+            $ command @'[T.Text] "uncheck" \ctx todoId-> do
+            checkUncheckQuery ctx todoId 0
 
           command @'[] "all" \ctx -> do
             allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
