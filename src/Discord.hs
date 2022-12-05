@@ -136,74 +136,78 @@ main = do
             let allTodoWithID = addTodoID allTodoID allTodo
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
 
-          command @'[] "edit-title" \ctx -> do
-            let updateList = getMessageContentParams " " $ ctx ^. #message % #content
-            let updateId = head updateList
-            let newTitle = T.intercalate " " $ tail updateList
+          void $ help (const "Edit todo title by id.\nFormat: !edit-title <id> <title>\nExample: !edit-title 1 Create Progress Report")
+            $ command @'[] "edit-title" \ctx -> do
+              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateId = head updateList
+              let newTitle = T.intercalate " " $ tail updateList
 
-            let todoId = toSqlKey . read . T.unpack $ updateId
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoTitle =. T.unpack newTitle]
-                void $ tell @T.Text ctx "Title updated!"
+              let todoId = toSqlKey . read . T.unpack $ updateId
+              todo <- db $ get todoId
+              case todo of
+                Nothing -> do
+                  void $ tell @T.Text ctx "Todo not found!"
+                Just (Todo {}) -> do
+                  db_ $ update todoId [TodoTitle =. T.unpack newTitle]
+                  void $ tell @T.Text ctx "Title updated!"
 
-          command @'[] "edit-desc" \ctx -> do
-            let updateList = getMessageContentParams " " $ ctx ^. #message % #content
-            let updateId = getNthElement 0 updateList
-            let newDescription = T.intercalate " " $ tail updateList
+          void $ help (const "Edit todo description by id.\nFormat: !edit-desc <id> <description>\nExample: !edit-desc 1 Limit 5 pages")
+            $ command @'[] "edit-desc" \ctx -> do
+              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateId = getNthElement 0 updateList
+              let newDescription = T.intercalate " " $ tail updateList
 
-            let todoId = toSqlKey . read . T.unpack $ updateId
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoDescription =. T.unpack newDescription]
-                void $ tell @T.Text ctx "Description updated!"
+              let todoId = toSqlKey . read . T.unpack $ updateId
+              todo <- db $ get todoId
+              case todo of
+                Nothing -> do
+                  void $ tell @T.Text ctx "Todo not found!"
+                Just (Todo {}) -> do
+                  db_ $ update todoId [TodoDescription =. T.unpack newDescription]
+                  void $ tell @T.Text ctx "Description updated!"
 
-          command @'[] "edit-date" \ctx -> do
-            let updateList = getMessageContentParams " " $ ctx ^. #message % #content
-            let updateId = getNthElement 0 updateList
-            let newDate = getNthElement 1 updateList
-            let newTime = getNthElement 2 updateList
+          void $ help (const "Edit todo deadline date by id.\nFormat: !edit-date <id> <YYYY:MM:DD> <HH:mm>\nExample: !edit-date 1 2022-12-31 21:00")
+            $ command @'[] "edit-date" \ctx -> do
+              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateId = getNthElement 0 updateList
+              let newDate = getNthElement 1 updateList
+              let newTime = getNthElement 2 updateList
 
-            let deadlineDateString = deadlinesToUTCTimeString newDate newTime
-            let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
+              let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+              let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
 
-            let todoId = toSqlKey . read . T.unpack $ updateId
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoDeadline_date =. deadlineDate]
-                void $ tell @T.Text ctx "Deadline date updated!"
+              let todoId = toSqlKey . read . T.unpack $ updateId
+              todo <- db $ get todoId
+              case todo of
+                Nothing -> do
+                  void $ tell @T.Text ctx "Todo not found!"
+                Just (Todo {}) -> do
+                  db_ $ update todoId [TodoDeadline_date =. deadlineDate]
+                  void $ tell @T.Text ctx "Deadline date updated!"
 
-          command @'[] "edit" \ctx -> do
-            let updateList = getMessageContentParams " " $ ctx ^. #message % #content
-            let updateId = getNthElement 0 updateList
+          void $ help (const "Edit todo by id.\nFormat: !edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>\nExample: !edit 1 | Create Report | Limit 5 pages | 2022-12-31 21:00")
+            $ command @'[] "edit" \ctx -> do
+              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateId = getNthElement 0 updateList
 
-            let paramList = getMessageContentParams "|" $ ctx ^. #message % #content
-            let newTitle = getNthElement 0 paramList
-            let newDescription = getNthElement 1 paramList
-            let dateTimeList = T.splitOn " " $ getNthElement 2 paramList
-            let newDate = getNthElement 0 dateTimeList
-            let newTime = getNthElement 1 dateTimeList
+              let paramList = getMessageContentParams "|" $ ctx ^. #message % #content
+              let newTitle = getNthElement 0 paramList
+              let newDescription = getNthElement 1 paramList
+              let dateTimeList = T.splitOn " " $ getNthElement 2 paramList
+              let newDate = getNthElement 0 dateTimeList
+              let newTime = getNthElement 1 dateTimeList
 
-            let deadlineDateString = deadlinesToUTCTimeString newDate newTime
-            let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
+              let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+              let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
 
-            let todoId = toSqlKey . read . T.unpack $ updateId
-            todo <- db $ get todoId
-            case todo of
-              Nothing -> do
-                void $ tell @T.Text ctx "Todo not found!"
-              Just (Todo {}) -> do
-                db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. deadlineDate]
-                void $ tell @T.Text ctx "Todo updated!"
+              let todoId = toSqlKey . read . T.unpack $ updateId
+              todo <- db $ get todoId
+              case todo of
+                Nothing -> do
+                  void $ tell @T.Text ctx "Todo not found!"
+                Just (Todo {}) -> do
+                  db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. deadlineDate]
+                  void $ tell @T.Text ctx "Todo updated!"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
