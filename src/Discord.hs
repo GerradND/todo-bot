@@ -27,8 +27,8 @@ import           Calamity.Metrics.Noop
 import           Control.Arrow ((&&&))
 import           Control.Monad
 import           Control.Monad.Logger    (runStderrLoggingT)
-import           Data.Char (isDigit)  
-import           Data.List  
+import           Data.Char (isDigit)
+import           Data.List
 import qualified Data.Map.Strict              as Map
 import           Data.Maybe
 import qualified Data.Text                    as T
@@ -121,7 +121,7 @@ main = do
             let user = ctx ^. #user % #username
             userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
             void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
-          
+
           void $ help (const "Mark completed todo list.\nExample: !check 1")
             $ command @'[T.Text] "check" \ctx todoId -> do
             checkUncheckQuery ctx todoId 1
@@ -137,37 +137,29 @@ main = do
             let allTodoWithID = addTodoID allTodoID allTodo
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
 
-          void $ help (const "Edit todo title by id.\nFormat: !edit-title <id> <title>\nExample: !edit-title 1 Create Progress Report")
+          void $ help (const "Edit todo title by id.\nFormat: **!edit-title <id> <title>**\nExample: **!edit-title 1 Create Progress Report**")
             $ command @'[] "edit-title" \ctx -> do
               let updateList = getMessageContentParams " " $ ctx ^. #message % #content
               let updateId = head updateList
               let newTitle = T.intercalate " " $ tail updateList
 
-              let todoId = toSqlKey . read . T.unpack $ updateId
-              todo <- db $ get todoId
-              case todo of
-                Nothing -> do
-                  void $ tell @T.Text ctx "Todo not found!"
-                Just (Todo {}) -> do
-                  db_ $ update todoId [TodoTitle =. T.unpack newTitle]
-                  void $ tell @T.Text ctx "Title updated!"
+              if T.all isDigit updateId && length updateList >= 3
+                then do editTitleQuery ctx updateId newTitle
+              else
+                void $ tell @T.Text ctx "Wrong format! For help: !help edit-title"
 
-          void $ help (const "Edit todo description by id.\nFormat: !edit-desc <id> <description>\nExample: !edit-desc 1 limit 5 pages")
+          void $ help (const "Edit todo description by id.\nFormat: **!edit-desc <id> <description>**\nExample: **!edit-desc 1 limit 5 pages**")
             $ command @'[] "edit-desc" \ctx -> do
               let updateList = getMessageContentParams " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
               let newDescription = T.intercalate " " $ tail updateList
 
-              let todoId = toSqlKey . read . T.unpack $ updateId
-              todo <- db $ get todoId
-              case todo of
-                Nothing -> do
-                  void $ tell @T.Text ctx "Todo not found!"
-                Just (Todo {}) -> do
-                  db_ $ update todoId [TodoDescription =. T.unpack newDescription]
-                  void $ tell @T.Text ctx "Description updated!"
+              if T.all isDigit updateId && length updateList >= 3
+                then do editDescQuery ctx updateId newDescription
+              else
+                void $ tell @T.Text ctx "Wrong format! For help: !help edit-desc"
 
-          void $ help (const "Edit todo deadline date by id.\nFormat: !edit-date <id> <YYYY:MM:DD> <HH:mm>\nExample: !edit-date 1 2022-12-31 21:00")
+          void $ help (const "Edit todo deadline date by id.\nFormat: **!edit-date <id> <YYYY:MM:DD> <HH:mm>**\nExample: **!edit-date 1 2022-12-31 21:00**")
             $ command @'[] "edit-date" \ctx -> do
               let updateList = getMessageContentParams " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
@@ -177,16 +169,12 @@ main = do
               let deadlineDateString = deadlinesToUTCTimeString newDate newTime
               let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
 
-              let todoId = toSqlKey . read . T.unpack $ updateId
-              todo <- db $ get todoId
-              case todo of
-                Nothing -> do
-                  void $ tell @T.Text ctx "Todo not found!"
-                Just (Todo {}) -> do
-                  db_ $ update todoId [TodoDeadline_date =. deadlineDate]
-                  void $ tell @T.Text ctx "Deadline date updated!"
+              if T.all isDigit updateId && length updateList == 3
+                then do editDateQuery ctx updateId deadlineDate
+              else
+                void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
 
-          void $ help (const "Edit todo by id.\nFormat: !edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>\nExample: !edit 1 | Create Report | limit 5 pages | 2022-12-31 21:00")
+          void $ help (const "Edit todo by id.\nFormat: **!edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>**\nExample: **!edit 1 | Create Report | limit 5 pages | 2022-12-31 21:00**")
             $ command @'[] "edit" \ctx -> do
               let updateList = getMessageContentParams " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
@@ -201,14 +189,10 @@ main = do
               let deadlineDateString = deadlinesToUTCTimeString newDate newTime
               let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
 
-              let todoId = toSqlKey . read . T.unpack $ updateId
-              todo <- db $ get todoId
-              case todo of
-                Nothing -> do
-                  void $ tell @T.Text ctx "Todo not found!"
-                Just (Todo {}) -> do
-                  db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. deadlineDate]
-                  void $ tell @T.Text ctx "Todo updated!"
+              if T.all isDigit updateId && length paramList == 3
+                then do editTodoQuery ctx updateId newTitle newDescription deadlineDate
+              else
+                void $ tell @T.Text ctx "Wrong format! For help: !help edit"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"

@@ -6,7 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 
-module Query (checkUncheckQuery) where
+module Query (checkUncheckQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery) where
 
 import           Calamity (tell, BotC)
 import           Calamity.Commands
@@ -25,6 +25,7 @@ import qualified Di
 import           Optics
 import qualified Polysemy                    as P
 import           PostgresDB
+import qualified Data.Time as Data.Time.Clock.Internal.UTCTime
 
 checkUncheckQuery :: 
     ( BotC r
@@ -50,6 +51,58 @@ checkUncheckQuery ctx txt status = do
                     else
                         printResponse ctx "Todo unchecked!"
     else printResponse ctx "Wrong format!"
+
+editTitleQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> T.Text -> P.Sem r ()
+editTitleQuery ctx todoid newTitle = do
+    let todoId = toSqlKey . read . T.unpack $ todoid
+    todo <- db $ get todoId
+    case todo of
+        Nothing -> do
+            printResponse ctx "Todo not found!"
+        Just (Todo {}) -> do
+            db_ $ update todoId [TodoTitle =. T.unpack newTitle]
+            printResponse ctx "Title updated!"
+
+editDescQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> T.Text -> P.Sem r ()
+editDescQuery ctx todoid newDescription = do
+    let todoId = toSqlKey . read . T.unpack $ todoid
+    todo <- db $ get todoId
+    case todo of
+        Nothing -> do
+            printResponse ctx "Todo not found!"
+        Just (Todo {}) -> do
+            db_ $ update todoId [TodoDescription =. T.unpack newDescription]
+            printResponse ctx "Description updated!"
+
+editDateQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> Data.Time.Clock.Internal.UTCTime.UTCTime -> P.Sem r ()
+editDateQuery ctx todoid newDeadline_date = do
+    let todoId = toSqlKey . read . T.unpack $ todoid
+    todo <- db $ get todoId
+    case todo of
+        Nothing -> do
+            printResponse ctx "Todo not found!"
+        Just (Todo {}) -> do
+            db_ $ update todoId [TodoDeadline_date =. newDeadline_date]
+            printResponse ctx "Deadline date updated!"
+
+editTodoQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> T.Text -> T.Text -> Data.Time.Clock.Internal.UTCTime.UTCTime -> P.Sem r ()
+editTodoQuery ctx todoid newTitle newDescription newDeadline_date = do
+    let todoId = toSqlKey . read . T.unpack $ todoid
+    todo <- db $ get todoId
+    case todo of
+        Nothing -> do
+            printResponse ctx "Todo not found!"
+        Just (Todo {}) -> do
+            db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. newDeadline_date]
+            printResponse ctx "Todo updated!"
 
 printResponse ::   
     ( BotC r
