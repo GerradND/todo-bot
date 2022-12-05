@@ -27,8 +27,8 @@ library
   exposed-modules:
       Database
       Discord
-      Lib
       PostgresDB
+      Query
       Service.List
       Service.Test
   other-modules:
