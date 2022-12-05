@@ -73,7 +73,7 @@ formatTodo ((a, (b, (c, (d, e)))):ax)
   | otherwise = [ (show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
 
 iso8601 :: UTCTime -> String
-iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
+iso8601 = formatTime defaultTimeLocale "%Y-%-m-%-d %R"
 
 returnFunc :: [(Int64, (String, (String, (UTCTime, Int))))] -> String
 returnFunc a
