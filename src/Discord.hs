@@ -115,7 +115,7 @@ main = do
             checkUncheckQuery ctx todoId 0
 
           command @'[] "all" \ctx -> do
-            allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] []
+            allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] [Asc TodoDeadline_date, Asc TodoStatus]
             let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
             let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
             let allTodoWithID = addTodoID allTodoID allTodo
