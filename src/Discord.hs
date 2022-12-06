@@ -60,7 +60,7 @@ data MyViewState = MyViewState
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
-connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
+connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
   
 main :: IO ()
 main = do

@@ -64,6 +64,7 @@ returnFunc a
   | otherwise = "no todo data"
 
 formatTodo :: [Entity Todo] -> [String]
+formatTodo [] = []
 formatTodo ((Entity key (Todo title description deadline _createdDate status _serverId _createdBy)):ax)
   | status == 0 = [(show $ fromSqlKey key) <> " - [] - " <> title <> " - " <> description <> " - " <> iso8601 deadline] ++ formatTodo ax
   | otherwise = [(show $ fromSqlKey key) <> " - [X] - " <> title <> " - " <> description <> " - " <> iso8601 deadline] ++ formatTodo ax
