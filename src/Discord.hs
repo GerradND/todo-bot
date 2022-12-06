@@ -53,7 +53,6 @@ import qualified Polysemy.Reader              as P
 import           PostgresDB
 import           Query
 import           TextShow
-import Service.List (formatTodo, iso8601)
 
 data MyViewState = MyViewState
   { numOptions :: Int,
@@ -91,10 +90,6 @@ main = do
           addCommands $ do
             helpCommand
             command @'[] "utest" \ctx -> do
-              -- data Context = Context { ... , user :: User }
-              -- #user :: Getter s a
-              -- data User = User { ... , username :: Text }
-              -- Map s a
               void $ tell @T.Text ctx $ "got user: " <> ctx ^. #user % #username <> ", with message: " <> ctx ^. #message % #content
               db_ $ Psql.insert $ UserD (ctx ^. #user % #username) (ctx ^. #message % #content)
 

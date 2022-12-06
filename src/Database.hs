@@ -18,7 +18,6 @@ module Database
 import           Conduit
 import           Control.Monad
 import           Control.Monad.Logger    (LoggingT, runStdoutLoggingT)
-import           Data.Text               (Text)
 import           Database.Persist.Postgresql
 import qualified Polysemy                as P
 
@@ -32,12 +31,6 @@ P.makeSem ''Persistable
 -- | Like `db`, but discards the result.
 db_ :: P.Member Persistable r => DatabaseAction a -> P.Sem r ()
 db_ = void . db
-
--- userId <- (db $ (selectList [UserDName ==. user] [LimitTo 1]) :: DatabaseAction ([Entity UserD])) :: P.Sem r [Entity UserD]
--- userId :: [Entity UserD]
-
--- userId <- (db_ $ (selectList [UserDName ==. user] [LimitTo 1]) :: DatabaseAction ([Entity UserD])) :: P.Sem r ()
--- userId :: ()
 
 -- | A `polysemy` effect handler for `persistent` actions.
 runPersistWith :: P.Member (P.Embed IO) r => ConnectionString -> P.Sem (Persistable : r) a -> P.Sem r a
