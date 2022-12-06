@@ -6,16 +6,20 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 
-module Query (checkUncheckQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery, deleteTodoQuery) where
+module Query (checkUncheckQuery, addQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery, deleteTodoQuery) where
 
 import           Calamity (tell, BotC)
 import           Calamity.Commands
-import           Calamity.Commands.Context (FullContext)
+import           Calamity.Commands.Context as Ctx (FullContext(user), ctxChannelID, ctxMessage)
+import           Calamity.Types.Model.Channel.Message as M
+import           Calamity.Types.Model.User as U
 import           Calamity.Metrics.Noop
 import           Control.Concurrent
 import           Control.Monad
 import           Data.Char (isDigit)
 import qualified Data.Text                   as T
+import           Data.Time (defaultTimeLocale, parseTimeM)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
 import           Database
 import           Database.Persist
 import           Database.Persist.Postgresql as Psql
@@ -32,7 +36,7 @@ checkUncheckQuery ::
     , P.Members
     '[ Persistable
     ] r
-    ) => FullContext -> T.Text -> Int -> P.Sem r ()
+    ) => Ctx.FullContext -> T.Text -> Int -> P.Sem r ()
 checkUncheckQuery ctx txt status = do 
     let message = T.unpack $ ctx ^. #message % #content
     let lengthMessage = length . words $ message
@@ -52,6 +56,51 @@ checkUncheckQuery ctx txt status = do
                         printResponse ctx "Todo unchecked!"
     else printResponse ctx "Wrong format!"
 
+deadlinesToUTCTimeString :: T.Text -> T.Text -> String
+deadlinesToUTCTimeString deadlineDate deadlineTime = T.unpack (deadlineDate <> " " <> deadlineTime)
+
+-- MS: This is functions for add
+getMessageContentParams :: String -> T.Text -> [T.Text]
+getMessageContentParams d t = tail $ map T.strip (T.splitOn (T.pack d) t)
+
+getParamsFromMessageContentParams :: String -> T.Text -> [T.Text]
+getParamsFromMessageContentParams d t = map T.strip (T.splitOn (T.pack d) t)
+
+addQuery :: 
+    ( BotC r
+    , P.Members
+    '[ Persistable
+    ] r
+    ) => Ctx.FullContext -> P.Sem r ()
+addQuery ctx = do
+    let message = Ctx.ctxMessage ctx
+    let addList = getMessageContentParams " " $ M.content message
+
+    let paramsString = T.intercalate " " addList
+    let paramList = getParamsFromMessageContentParams "|" paramsString
+    case paramList of 
+        [title, description, deadlineInDate, deadlineInTime] -> do
+            let [title, description, deadlineInDate, deadlineInTime] = paramList
+            let title = T.unpack $ head paramList
+            let description = T.unpack $ (head . tail) paramList
+            let deadlineInDate = (head . tail . tail) paramList
+            let deadlineInTime = (head . tail . tail . tail) paramList
+            let deadlineDateString = deadlinesToUTCTimeString deadlineInDate deadlineInTime
+
+            case parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString of
+                Nothing -> printResponse ctx "Invalid use of command! For help: !help add"
+                Just deadlineDate -> do
+                    createdDate <- P.embed getCurrentTime
+                    let status = 0
+                    let serverId = show (Ctx.ctxChannelID ctx)
+                    let user = Ctx.user (ctx)
+                    let username = U.username user
+                    let discriminator = U.discriminator user
+                    let createdBy = T.unpack $ username <> "#" <> discriminator
+
+                    db_ $ Psql.insert (Todo title description deadlineDate createdDate status serverId createdBy)
+                    printResponse ctx "Added new todo!"
+        _ -> printResponse ctx "Invalid use of command! For help: !help add"
 editTitleQuery :: 
     (BotC r, P.Members '[Persistable] r) 
     => FullContext -> T.Text -> T.Text -> P.Sem r ()
