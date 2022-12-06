@@ -105,4 +105,4 @@ $ stack exec todo-bot-exe
 2. [Rafi Muhammad](https://github.com/rafimuhammad01)
 3. [Antonius Anggito](https://github.com/antoniusanggito/)
 4. [Mario Serano](https://github.com/MarioSerano)
-5. [Danan Maulidan]()
+5. [Danan Maulidan](https://github.com/dananakbar)
