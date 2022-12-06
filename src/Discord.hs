@@ -18,50 +18,42 @@
 
 module Discord where
 
-import Calamity
-import Calamity.Cache.InMemory
-import Calamity.Commands
-import Calamity.Commands.Context (FullContext, ctxChannelID, useFullContext)
+import           Calamity
+import           Calamity.Cache.InMemory
+import           Control.Concurrent
+import           Calamity.Commands
 import Calamity.Commands.Context as Ctx (FullContext (user), ctxChannelID, ctxMessage, useFullContext)
-import qualified Calamity.Interactions as I
-import Calamity.Metrics.Noop
-import Calamity.Types.Model.Channel.Message as M
-import Calamity.Types.Model.User as U
-import Control.Arrow ((&&&))
-import Control.Concurrent
-import Control.Monad
-import Control.Monad.IO.Class (liftIO)
-import Control.Monad.Logger (runStderrLoggingT)
-import Data.Char (isDigit)
-import Data.List
-import qualified Data.Map.Strict as Map
-import Data.Maybe
-import qualified Data.Text as T
+import qualified Calamity.Interactions        as I
+import           Calamity.Metrics.Noop
+import           Control.Monad
+import           Control.Monad.Logger    (runStderrLoggingT)
+import           Data.Char (isDigit)  
+import           Data.List  
+import qualified Data.Map.Strict              as Map
+import qualified Data.Text                    as T
 import Data.Time (defaultTimeLocale, parseTimeM)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale, formatTime)
-import Data.Typeable
-import Database
-import Database.Persist
-import Database.Persist.Postgresql as Psql
-import Database.Persist.TH
-import Database.Persist.Types
-import Debug.Trace
+import           Database
+import           Database.Persist
+import           Database.Persist.Postgresql  as Psql
+import           Database.Persist.TH
+import           Database.Persist.Types
+import           Debug.Trace
 import qualified Di
-import qualified DiPolysemy as DiP
-import GHC.Int (Int64)
-import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.AtomicState as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Reader as P
-import qualified Polysemy.State as P
-import PostgresDB
-import Query
-import System.Environment (getEnv)
-import System.IO.Unsafe
-import TextShow
+import qualified DiPolysemy                   as DiP
+import           GHC.Int (Int64)
+import           Optics
+import qualified Polysemy                     as P
+import qualified Polysemy.Async               as P
+import qualified Polysemy.State               as P
+import qualified Polysemy.AtomicState         as P
+import qualified Polysemy.Fail                as P
+import qualified Polysemy.Reader              as P
+import           PostgresDB
+import           Query
+import           TextShow
+import Service.List (formatTodo, iso8601)
 
 data MyViewState = MyViewState
   { numOptions :: Int,
@@ -71,25 +63,7 @@ data MyViewState = MyViewState
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
-connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
-
-addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
-addTodoID [] [] = []
-addTodoID (a:ax) (b:bx) = [(a,b)] ++ addTodoID ax bx
-
-formatTodo :: [(Int64, (String, (String, (UTCTime, Int))))] -> [String]
-formatTodo [] = []
-formatTodo ((a, (b, (c, (d, e)))) : ax)
-  | e == 0 = [(show a) ++ " - [] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
-  | otherwise = [(show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
-
-iso8601 :: UTCTime -> String
-iso8601 = formatTime defaultTimeLocale "%FT%T%QZ"
-
-returnFunc :: [(Int64, (String, (String, (UTCTime, Int))))] -> String
-returnFunc a
-  | (intercalate "\n" $ formatTodo a) /= "" = (intercalate "\n" $ formatTodo a)
-  | otherwise = "no todo data"
+connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
 
 getMessageContentParamsWithDelimiter :: String -> T.Text -> [T.Text]
 getMessageContentParamsWithDelimiter d t = tail $ map T.strip (T.splitOn (T.pack d) t)
@@ -100,6 +74,7 @@ deadlinesToUTCTimeString deadlineDate deadlineTime = T.unpack (deadlineDate <> "
 printHelpException :: (BotC r) => FullContext -> T.Text -> P.Sem r ()
 printHelpException ctx cmd = void $ tell @T.Text ctx $ "Wrong format! For help: !help " <> cmd
 
+  
 main :: IO ()
 main = do
   Di.new $ \di ->
@@ -128,22 +103,17 @@ main = do
               userId <- db $ selectList [UserDName ==. user] [LimitTo 1]
               void $ tell @T.Text ctx $ "user: " <> (userDName . entityVal . head) userId
 
-            void $
-              help (const "Mark completed todo list.\nExample: !check 1") $
-                command @'[T.Text] "check" \ctx todoId -> do
-                  checkUncheckQuery ctx todoId 1
+            void $ help (const "Mark completed todo list.\nExample: !check 1")
+              $ command @'[T.Text] "check" \ctx todoId -> do
+              checkUncheckQuery ctx todoId 1
 
-            void $
-              help (const "Unmark uncomplete todo list.\nExample: !uncheck 1") $
-                command @'[T.Text] "uncheck" \ctx todoId -> do
-                  checkUncheckQuery ctx todoId 0
+            void $ help (const "Unmark uncomplete todo list.\nExample: !uncheck 1")
+              $ command @'[T.Text] "uncheck" \ctx todoId-> do
+              checkUncheckQuery ctx todoId 0
 
-            command @'[] "all" \ctx -> do
-              allTodoRaw <- db $ selectList [TodoServer_id ==. (show (Ctx.ctxChannelID ctx))] []
-              let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus) . entityVal <$> (allTodoRaw :: [Entity Todo])
-              let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
-              let allTodoWithID = addTodoID allTodoID allTodo
-              void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID)
+            void $ help (const "Show all todo")
+              $ command @'[] "all" \ctx -> do
+                getAllTODOQuery ctx 
 
             void $
               help (const "Add todo.\nFormat: **!add <title> | <description> | <date in YYYY-MM-DD> | <time in HH:MM>**\nExample: **!add My Todo! | My Todo is great and righteous! | 1945-08-17 | 10:00**") $
@@ -207,7 +177,7 @@ main = do
                           _ -> printHelpException ctx "edit"
                     else printHelpException ctx "edit"
                   _ -> printHelpException ctx "edit"
-          
+
             void $ help (const "Delete To-Do by id.\nExample: **!delete-todo 1**")
               $ command @'[T.Text] "delete-todo" \ctx todoId -> do
                 deleteTodoQuery ctx todoId

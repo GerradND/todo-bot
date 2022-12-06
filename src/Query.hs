@@ -6,7 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 
-module Query (checkUncheckQuery, addQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery, deleteTodoQuery) where
+module Query (checkUncheckQuery, addQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery, deleteTodoQuery, getAllTODOQuery) where
 
 import           Calamity (tell, BotC)
 import           Calamity.Commands
@@ -18,8 +18,7 @@ import           Control.Concurrent
 import           Control.Monad
 import           Data.Char (isDigit)
 import qualified Data.Text                   as T
-import           Data.Time (defaultTimeLocale, parseTimeM)
-import           Data.Time.Clock (UTCTime, getCurrentTime)
+import qualified Data.List                  as L
 import           Database
 import           Database.Persist
 import           Database.Persist.Postgresql as Psql
@@ -29,6 +28,10 @@ import qualified Di
 import           Optics
 import qualified Polysemy                    as P
 import           PostgresDB
+import           GHC.Int (Int64)
+import           Data.Time.Clock (UTCTime, getCurrentTime)
+import           Data.Time.Format (formatTime, defaultTimeLocale, parseTimeM)
+import           Control.Arrow ((&&&))
 import qualified Data.Time as Data.Time.Clock.Internal.UTCTime
 
 checkUncheckQuery :: 
@@ -170,6 +173,32 @@ deleteTodoQuery ctx txt = do
                     db_ $ delete todoId
                     printResponse ctx "Todo has been successfully deleted!"
     else printResponse ctx "Wrong format! For help: !help delete-todo"
+
+-- get all todo
+returnFunc :: [Entity Todo] -> String
+returnFunc a
+  | (L.intercalate "\n" $ formatTodo a) /= "" = (L.intercalate "\n" $ formatTodo a)
+  | otherwise = "no todo data"
+
+formatTodo :: [Entity Todo] -> [String]
+formatTodo [] = []
+formatTodo ((Entity key (Todo title description deadline _createdDate status _serverId _createdBy)):ax)
+  | status == 0 = [(show $ fromSqlKey key) <> " - [] - " <> title <> " - " <> description <> " - " <> iso8601 deadline] ++ formatTodo ax
+  | otherwise = [(show $ fromSqlKey key) <> " - [X] - " <> title <> " - " <> description <> " - " <> iso8601 deadline] ++ formatTodo ax
+
+iso8601 :: UTCTime -> String
+iso8601 = formatTime defaultTimeLocale "%Y-%-m-%-d %R"
+
+getAllTODOQuery ::
+    ( BotC r
+    , P.Members
+    '[ Persistable
+    ] r
+    ) => FullContext -> P.Sem r ()
+getAllTODOQuery ctx = do
+    allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] [Asc TodoDeadline_date, Asc TodoStatus] 
+    printResponse ctx $ T.pack $ returnFunc allTodoRaw
+
 
 printResponse ::   
     ( BotC r
