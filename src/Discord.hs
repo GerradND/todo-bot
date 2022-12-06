@@ -23,7 +23,6 @@ import           Calamity.Commands
 import           Calamity.Commands.Context (useFullContext, ctxChannelID)
 import qualified Calamity.Interactions        as I
 import           Calamity.Metrics.Noop
-import           Control.Arrow ((&&&))
 import           Control.Monad
 import           Control.Monad.Logger    (runStderrLoggingT)
 import           Data.Char (isDigit)  
@@ -51,6 +50,7 @@ import qualified Polysemy.Reader              as P
 import           PostgresDB
 import           Query
 import           TextShow
+import Service.List (formatTodo, iso8601)
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -61,25 +61,7 @@ $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
 connStr = "host=localhost dbname=todobot user=postgres password=root port=5432"
-
-addTodoID :: [Int64] -> [(String, (String, (UTCTime, Int)))] -> [(Int64, (String, (String, (UTCTime, Int))))]
-addTodoID [] [] = []
-addTodoID (a:ax) (b:bx) = [(a,b)] ++ addTodoID ax bx
   
-formatTodo :: [(Int64, (String, (String, (UTCTime, Int))))] -> [String]
-formatTodo [] = []
-formatTodo ((a, (b, (c, (d, e)))):ax)
-  | e == 0 = [ (show a) ++ " - [] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
-  | otherwise = [ (show a) ++ " - [X] - " ++ b ++ " - " ++ c ++ " - " ++ (iso8601 d)] ++ formatTodo ax
-
-iso8601 :: UTCTime -> String
-iso8601 = formatTime defaultTimeLocale "%Y-%-m-%-d %R"
-
-returnFunc :: [(Int64, (String, (String, (UTCTime, Int))))] -> String
-returnFunc a
-  | (intercalate "\n" $ formatTodo a) /= "" = (intercalate "\n" $ formatTodo a)
-  | otherwise = "no todo data"
-
 main :: IO ()
 main = do
   Di.new $ \di ->
@@ -114,12 +96,16 @@ main = do
             $ command @'[T.Text] "uncheck" \ctx todoId-> do
             checkUncheckQuery ctx todoId 0
 
-          command @'[] "all" \ctx -> do
-            allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] [Asc TodoDeadline_date, Asc TodoStatus]
-            let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
-            let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
-            let allTodoWithID = addTodoID allTodoID allTodo
-            void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
+          void $ help (const "Show all todo")
+            $ command @'[] "all" \ctx -> do
+              getAllTODOQuery ctx 
+
+          -- command @'[] "all" \ctx -> do
+          --   allTodoRaw <- db $ selectList [TodoServer_id ==. (show (ctxChannelID ctx))] [Asc TodoDeadline_date, Asc TodoStatus]
+          --   let allTodo = (todoTitle &&& todoDescription &&& todoDeadline_date &&& todoStatus ) . entityVal <$> (allTodoRaw :: [Entity Todo])
+          --   let allTodoID = fromSqlKey . entityKey <$> (allTodoRaw :: [Entity Todo])
+          --   let allTodoWithID = addTodoID allTodoID allTodo
+          --   void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
