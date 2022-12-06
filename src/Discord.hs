@@ -84,8 +84,8 @@ returnFunc a
   | (intercalate "\n" $ formatTodo a) /= "" = (intercalate "\n" $ formatTodo a)
   | otherwise = "no todo data"
 
-getMessageContentParams :: String -> T.Text -> [T.Text]
-getMessageContentParams d t = tail $ map T.strip (T.splitOn (T.pack d) t)
+getMessageContentParamsWithDelimiter :: String -> T.Text -> [T.Text]
+getMessageContentParamsWithDelimiter d t = tail $ map T.strip (T.splitOn (T.pack d) t)
 
 getNthElement :: Int -> [a] -> a
 getNthElement _ [] = error "Invalid command!"
@@ -139,7 +139,7 @@ main = do
 
           void $ help (const "Edit todo title by id.\nFormat: **!edit-title <id> <title>**\nExample: **!edit-title 1 Create Progress Report**")
             $ command @'[] "edit-title" \ctx -> do
-              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
               let updateId = head updateList
               let newTitle = T.intercalate " " $ tail updateList
 
@@ -150,7 +150,7 @@ main = do
 
           void $ help (const "Edit todo description by id.\nFormat: **!edit-desc <id> <description>**\nExample: **!edit-desc 1 limit 5 pages**")
             $ command @'[] "edit-desc" \ctx -> do
-              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
               let newDescription = T.intercalate " " $ tail updateList
 
@@ -161,25 +161,28 @@ main = do
 
           void $ help (const "Edit todo deadline date by id.\nFormat: **!edit-date <id> <YYYY:MM:DD> <HH:mm>**\nExample: **!edit-date 1 2022-12-31 21:00**")
             $ command @'[] "edit-date" \ctx -> do
-              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
               let newDate = getNthElement 1 updateList
               let newTime = getNthElement 2 updateList
 
               let deadlineDateString = deadlinesToUTCTimeString newDate newTime
-              let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
 
               if T.all isDigit updateId && length updateList == 3
-                then do editDateQuery ctx updateId deadlineDate
-              else
-                void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
+                then do 
+                  case parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString of
+                    Nothing -> void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
+                    Just deadlineDate -> editDateQuery ctx updateId deadlineDate
+                else
+                  void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
+                  
 
           void $ help (const "Edit todo by id.\nFormat: **!edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>**\nExample: **!edit 1 | Create Report | limit 5 pages | 2022-12-31 21:00**")
             $ command @'[] "edit" \ctx -> do
-              let updateList = getMessageContentParams " " $ ctx ^. #message % #content
+              let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
               let updateId = getNthElement 0 updateList
 
-              let paramList = getMessageContentParams "|" $ ctx ^. #message % #content
+              let paramList = getMessageContentParamsWithDelimiter "|" $ ctx ^. #message % #content
               let newTitle = getNthElement 0 paramList
               let newDescription = getNthElement 1 paramList
               let dateTimeList = T.splitOn " " $ getNthElement 2 paramList
