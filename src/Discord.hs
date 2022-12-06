@@ -21,7 +21,7 @@ import           Calamity
 import           Calamity.Cache.InMemory
 import           Control.Concurrent
 import           Calamity.Commands
-import           Calamity.Commands.Context (useFullContext, ctxChannelID)
+import           Calamity.Commands.Context (useFullContext, ctxChannelID, FullContext)
 import qualified Calamity.Interactions        as I
 import           Calamity.Metrics.Noop
 import           Control.Arrow ((&&&))
@@ -87,14 +87,11 @@ returnFunc a
 getMessageContentParamsWithDelimiter :: String -> T.Text -> [T.Text]
 getMessageContentParamsWithDelimiter d t = tail $ map T.strip (T.splitOn (T.pack d) t)
 
-getNthElement :: Int -> [a] -> a
-getNthElement _ [] = error "Invalid command!"
-getNthElement n (x:xs)
-  | n <= 0 = x
-  | otherwise = getNthElement (n-1) xs
-
 deadlinesToUTCTimeString :: T.Text -> T.Text -> String
 deadlinesToUTCTimeString deadlineDate deadlineTime = T.unpack (deadlineDate <> " " <> deadlineTime)
+
+printHelpException :: (BotC r) => FullContext -> T.Text -> P.Sem r ()
+printHelpException ctx cmd = void $ tell @T.Text ctx $ "Wrong format! For help: !help " <> cmd
 
 main :: IO ()
 main = do
@@ -143,59 +140,57 @@ main = do
               let updateId = head updateList
               let newTitle = T.intercalate " " $ tail updateList
 
-              if T.all isDigit updateId && length updateList >= 3
+              if T.all isDigit updateId && length updateList >= 2
                 then do editTitleQuery ctx updateId newTitle
               else
-                void $ tell @T.Text ctx "Wrong format! For help: !help edit-title"
+                printHelpException ctx "edit-title"
 
           void $ help (const "Edit todo description by id.\nFormat: **!edit-desc <id> <description>**\nExample: **!edit-desc 1 limit 5 pages**")
             $ command @'[] "edit-desc" \ctx -> do
               let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
-              let updateId = getNthElement 0 updateList
+              let updateId = head updateList
               let newDescription = T.intercalate " " $ tail updateList
 
-              if T.all isDigit updateId && length updateList >= 3
+              if T.all isDigit updateId && length updateList >= 2
                 then do editDescQuery ctx updateId newDescription
               else
-                void $ tell @T.Text ctx "Wrong format! For help: !help edit-desc"
+                printHelpException ctx "edit-desc"
 
           void $ help (const "Edit todo deadline date by id.\nFormat: **!edit-date <id> <YYYY:MM:DD> <HH:mm>**\nExample: **!edit-date 1 2022-12-31 21:00**")
             $ command @'[] "edit-date" \ctx -> do
               let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
-              let updateId = getNthElement 0 updateList
-              let newDate = getNthElement 1 updateList
-              let newTime = getNthElement 2 updateList
-
-              let deadlineDateString = deadlinesToUTCTimeString newDate newTime
-
-              if T.all isDigit updateId && length updateList == 3
-                then do 
-                  case parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString of
-                    Nothing -> void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
-                    Just deadlineDate -> editDateQuery ctx updateId deadlineDate
-                else
-                  void $ tell @T.Text ctx "Wrong format! For help: !help edit-date"
-                  
-
+              case updateList of 
+                [updateId, newDate, newTime] -> do
+                  if T.all isDigit updateId
+                    then do 
+                      let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+                      case parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString of
+                        Nothing -> printHelpException ctx "edit-date"
+                        Just deadlineDate -> editDateQuery ctx updateId deadlineDate
+                  else
+                    printHelpException ctx "edit-date"
+                _ -> printHelpException ctx "edit-date"
+              
           void $ help (const "Edit todo by id.\nFormat: **!edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>**\nExample: **!edit 1 | Create Report | limit 5 pages | 2022-12-31 21:00**")
             $ command @'[] "edit" \ctx -> do
               let updateList = getMessageContentParamsWithDelimiter " " $ ctx ^. #message % #content
-              let updateId = getNthElement 0 updateList
+              let updateId = head updateList
 
               let paramList = getMessageContentParamsWithDelimiter "|" $ ctx ^. #message % #content
-              let newTitle = getNthElement 0 paramList
-              let newDescription = getNthElement 1 paramList
-              let dateTimeList = T.splitOn " " $ getNthElement 2 paramList
-              let newDate = getNthElement 0 dateTimeList
-              let newTime = getNthElement 1 dateTimeList
-
-              let deadlineDateString = deadlinesToUTCTimeString newDate newTime
-              let deadlineDate = fromJust (parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString :: Maybe UTCTime)
-
-              if T.all isDigit updateId && length paramList == 3
-                then do editTodoQuery ctx updateId newTitle newDescription deadlineDate
-              else
-                void $ tell @T.Text ctx "Wrong format! For help: !help edit"
+              case paramList of 
+                [newTitle, newDescription, newDateTime] -> do
+                  if T.all isDigit updateId
+                    then do
+                      let dateTimeList = T.splitOn " " newDateTime
+                      case dateTimeList of 
+                        [newDate, newTime] -> do
+                          let deadlineDateString = deadlinesToUTCTimeString newDate newTime
+                          case parseTimeM True defaultTimeLocale "%Y-%-m-%-d %R" deadlineDateString of
+                            Nothing -> printHelpException ctx "edit"
+                            Just deadlineDate -> editTodoQuery ctx updateId newTitle newDescription deadlineDate
+                        _ -> printHelpException ctx "edit"
+                  else printHelpException ctx "edit"
+                _ -> printHelpException ctx "edit"
 
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
