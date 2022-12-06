@@ -192,6 +192,10 @@ main = do
                   else printHelpException ctx "edit"
                 _ -> printHelpException ctx "edit"
 
+          void $ help (const "Delete To-Do by id.\nExample: **!delete-todo 1**")
+            $ command @'[T.Text] "delete-todo" \ctx todoId -> do
+              deleteTodoQuery ctx todoId
+
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
             stopBot

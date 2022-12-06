@@ -6,7 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 
-module Query (checkUncheckQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery) where
+module Query (checkUncheckQuery, editTitleQuery, editDescQuery, editDateQuery, editTodoQuery, deleteTodoQuery) where
 
 import           Calamity (tell, BotC)
 import           Calamity.Commands
@@ -103,6 +103,24 @@ editTodoQuery ctx todoid newTitle newDescription newDeadline_date = do
         Just (Todo {}) -> do
             db_ $ update todoId [TodoTitle =. T.unpack newTitle, TodoDescription =. T.unpack newDescription, TodoDeadline_date =. newDeadline_date]
             printResponse ctx "Todo updated!"
+            
+deleteTodoQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> P.Sem r ()
+deleteTodoQuery ctx txt = do 
+    let message = T.unpack $ ctx ^. #message % #content
+    let lengthMessage = length . words $ message
+    if lengthMessage == 2 && (T.all isDigit txt)
+        then do
+            let todoId = toSqlKey . read . T.unpack $ txt
+            todo <- db $ get todoId
+            case todo of
+                Nothing -> do
+                    printResponse ctx "Todo not found!"
+                Just (Todo {}) -> do
+                    db_ $ delete todoId
+                    printResponse ctx "Todo has been successfully deleted!"
+    else printResponse ctx "Wrong format! For help: !help delete-todo"
 
 printResponse ::   
     ( BotC r
