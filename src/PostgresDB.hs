@@ -48,5 +48,3 @@ share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
         message Text
         deriving Show
 |]
-
--- connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"

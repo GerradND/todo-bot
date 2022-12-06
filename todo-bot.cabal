@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.34.6.
+-- This file has been generated from package.yaml by hpack version 0.35.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -29,8 +29,6 @@ library
       Discord
       PostgresDB
       Query
-      Service.List
-      Service.Test
   other-modules:
       Paths_todo_bot
   hs-source-dirs:
