@@ -62,21 +62,14 @@ todo-bot is a discord bot written in haskell using [Calamity](https://github.com
       !edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>
    ```
 
-9. **Edit All Todo Field**\
+9. **Delete Todo**\
    Usage:
 
    ```
-      !edit <id> | <title> | <description> | <YYYY:MM:DD> <HH:mm>
+   !delete-todo <id>
    ```
 
-10. **Delete Todo**\
-    Usage:
-
-    ```
-    !delete-todo <id>
-    ```
-
-11. **Command Helper**\
+10. **Command Helper**\
     Usage:
 
     ```
