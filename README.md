@@ -78,7 +78,22 @@ todo-bot is a discord bot written in haskell using [Calamity](https://github.com
     !help <command>
     ```
 
-## Building
+## Invite ToDoBot to your Discord Server
+
+1. Go to the [discord calculator permission](https://discordapi.com/permissions.html)
+2. Select any permission/s for the bot
+3. Insert 1037017609037676585 to the Client ID Field
+4. Click the link and invite to you server
+
+## Cloning Repo
+
+If you cloned the repo, here are the steps for you to execute the program
+
+### Preparation
+
+Please change the connStr on Discord.hs with your postgreSQL config.
+
+### Building
 
 Run the following command to build the project. Note that the first build will take a while, Calamity has a pretty heavy dependency footprint. Subsequent builds should be significantly faster.
 
@@ -86,11 +101,13 @@ Run the following command to build the project. Note that the first build will t
 $ stack build
 ```
 
-## Running
+### Running
 
 ```sh
 $ stack exec todo-bot-exe
 ```
+
+Now your bot is online, do some interactions with ToDoBot by using the commands mentioned above.
 
 ## Contributor
 
