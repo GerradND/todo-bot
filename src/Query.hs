@@ -6,7 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE DataKinds #-}
 
-module Query (checkUncheckQuery) where
+module Query (checkUncheckQuery, deleteTodoQuery) where
 
 import           Calamity (tell, BotC)
 import           Calamity.Commands
@@ -50,6 +50,24 @@ checkUncheckQuery ctx txt status = do
                     else
                         printResponse ctx "Todo unchecked!"
     else printResponse ctx "Wrong format!"
+
+deleteTodoQuery :: 
+    (BotC r, P.Members '[Persistable] r) 
+    => FullContext -> T.Text -> P.Sem r ()
+deleteTodoQuery ctx txt = do 
+    let message = T.unpack $ ctx ^. #message % #content
+    let lengthMessage = length . words $ message
+    if lengthMessage == 2 && (T.all isDigit txt)
+        then do
+            let todoId = toSqlKey . read . T.unpack $ txt
+            todo <- db $ get todoId
+            case todo of
+                Nothing -> do
+                    printResponse ctx "Todo not found!"
+                Just (Todo {}) -> do
+                    db_ $ delete todoId
+                    printResponse ctx "Todo has been successfully deleted!"
+    else printResponse ctx "Wrong format! For help: !help delete-todo"
 
 printResponse ::   
     ( BotC r

@@ -121,6 +121,10 @@ main = do
             let allTodoWithID = addTodoID allTodoID allTodo
             void $ tell @T.Text ctx $ T.pack (returnFunc allTodoWithID) 
 
+          void $ help (const "Delete To-Do by id.\nExample: **!delete-todo 1**")
+            $ command @'[T.Text] "delete-todo" \ctx todoId -> do
+              deleteTodoQuery ctx todoId
+
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
             stopBot
