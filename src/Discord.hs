@@ -16,7 +16,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
-module Discord where
+module Discord (todobot) where
 
 import           Calamity
 import           Calamity.Cache.InMemory
@@ -62,7 +62,7 @@ data MyViewState = MyViewState
 $(makeFieldLabelsNoPrefix ''MyViewState)
 
 connStr :: Psql.ConnectionString
-connStr = "host=localhost dbname=postgres user=postgres password=postgres port=5432"
+connStr = "host=db dbname=postgres user=postgres password=postgres port=5432"
 
 getMessageContentParamsWithDelimiter :: String -> T.Text -> [T.Text]
 getMessageContentParamsWithDelimiter d t = tail $ map T.strip (T.splitOn (T.pack d) t)
@@ -74,8 +74,8 @@ printHelpException :: (BotC r) => FullContext -> T.Text -> P.Sem r ()
 printHelpException ctx cmd = void $ tell @T.Text ctx $ "Wrong format! For help: !help " <> cmd
 
   
-main :: IO ()
-main = do
+todobot :: IO ()
+todobot = do
   Di.new $ \di ->
     void . P.runFinal . P.embedToFinal . DiP.runDiToIO di
       . runCacheInMemory
