@@ -1,0 +1,135 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           todo-bot
+version:        0.1.0.0
+description:    Please see the README on GitHub at <https://github.com/githubuser/todo-bot#readme>
+homepage:       https://github.com/githubuser/todo-bot#readme
+bug-reports:    https://github.com/githubuser/todo-bot/issues
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2022 Author name here
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+source-repository head
+  type: git
+  location: https://github.com/githubuser/todo-bot
+
+library
+  exposed-modules:
+      Database
+      Discord
+      PostgresDB
+      Query
+  other-modules:
+      Paths_todo_bot
+  hs-source-dirs:
+      src
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , calamity >=0.3.0.0
+    , conduit
+    , containers
+    , data-default
+    , data-flags
+    , df1 >=0.3 && <0.5
+    , di >=1.3 && <2
+    , di-core >=1.0.4 && <1.1
+    , di-polysemy ==0.2.*
+    , generic-lens
+    , lens >=5.1 && <6
+    , monad-logger
+    , optics >=0.4.1 && <0.5
+    , persistent
+    , persistent-postgresql
+    , polysemy >=1.5 && <2
+    , polysemy-plugin >=0.3 && <0.5
+    , stm >=2.5 && <3
+    , text
+    , text-show >=3.8 && <4
+    , time
+  default-language: Haskell2010
+
+executable todo-bot-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_todo_bot
+  hs-source-dirs:
+      app
+  default-extensions:
+      DataKinds
+      OverloadedLabels
+      OverloadedStrings
+      TypeApplications
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , calamity >=0.3.0.0
+    , conduit
+    , containers
+    , data-default
+    , data-flags
+    , df1 >=0.3 && <0.5
+    , di >=1.3 && <2
+    , di-core >=1.0.4 && <1.1
+    , di-polysemy ==0.2.*
+    , generic-lens
+    , lens >=5.1 && <6
+    , monad-logger
+    , optics >=0.4.1 && <0.5
+    , persistent
+    , persistent-postgresql
+    , polysemy >=1.5 && <2
+    , polysemy-plugin >=0.3 && <0.5
+    , stm >=2.5 && <3
+    , text
+    , text-show >=3.8 && <4
+    , time
+    , todo-bot
+  default-language: Haskell2010
+
+test-suite todo-bot-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_todo_bot
+  hs-source-dirs:
+      test
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -fplugin=Polysemy.Plugin -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , base >=4.7 && <5
+    , calamity >=0.3.0.0
+    , conduit
+    , containers
+    , data-default
+    , data-flags
+    , df1 >=0.3 && <0.5
+    , di >=1.3 && <2
+    , di-core >=1.0.4 && <1.1
+    , di-polysemy ==0.2.*
+    , generic-lens
+    , lens >=5.1 && <6
+    , monad-logger
+    , optics >=0.4.1 && <0.5
+    , persistent
+    , persistent-postgresql
+    , polysemy >=1.5 && <2
+    , polysemy-plugin >=0.3 && <0.5
+    , stm >=2.5 && <3
+    , text
+    , text-show >=3.8 && <4
+    , time
+    , todo-bot
+  default-language: Haskell2010
