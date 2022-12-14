@@ -116,3 +116,33 @@ Now your bot is online, do some interactions with ToDoBot by using the commands 
 3. [Antonius Anggito](https://github.com/antoniusanggito/)
 4. [Mario Serano](https://github.com/MarioSerano)
 5. [Danan Maulidan](https://github.com/dananakbar)
+
+## Deployment
+
+We currently only support deployment through a dedicated virtual machine. The packages needed in the VM are as follows:
+
+- docker
+- docker-compose
+
+Through that, the step by steps in order to deploy this application are as follows:
+
+1.  Build docker image in local machine with this command:
+
+   ```
+   docker build -t antoniusanggito/todo-bot
+   ```
+
+2. Push the docker image to the Dockerhub with this command:
+
+   ```
+   docker push antoniusanggito/todo-bot
+   ```
+
+3. Go to your VM and create `docker-compose.yml` file that defines the application and also the database. For example you can see our `docker-compose.yml` file.
+
+4. Run the application with this command:
+   ```
+   docker-compose up -d
+   ```
+
+That's it, you have deployed your ToDoBot!
