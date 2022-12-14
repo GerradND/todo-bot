@@ -126,7 +126,7 @@ We currently only support deployment through a dedicated virtual machine. The pa
 
 Through that, the step by steps in order to deploy this application are as follows:
 
-1.  Build docker image in local machine with this command:
+1. Build docker image in local machine with this command:
 
    ```
    docker build -t antoniusanggito/todo-bot
